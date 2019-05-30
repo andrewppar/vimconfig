@@ -143,7 +143,6 @@ function! LineOutlineItemDepth ()
 endfunction
 
 function! OutlineItemDepth (line)
-  "This errors if the string can't be split
   let l:split_line=split(a:line, ' ')
   if empty(l:split_line)
     return 0
@@ -233,8 +232,4 @@ function! OutlineNewline ()
   execute ":normal! o" . l:stars . " " 
   return 1
 endfunction
-
-
-
-
 "  }}}
