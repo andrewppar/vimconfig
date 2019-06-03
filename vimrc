@@ -52,6 +52,10 @@ nnoremap [ %
 vnoremap [ %
 nnoremap gg=G :call Reindent()<cr> 
 
+"Copy and paste to clipboard
+vnoremap <leader>y :w !pbcopy<CR>
+nnoremap <leader>p :r !pbpaste<CR>
+
 function! Reindent () 
   "A reindent that doesn't take you away from the current line. 
   let l:linenumber=line('.')

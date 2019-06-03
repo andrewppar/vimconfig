@@ -6,8 +6,8 @@ endif
 syntax region orgBold start=/\v\*/ skip=/\v\\./ end=/\v\*/
 hi def orgBold term=bold cterm=bold gui=bold 
 
-syntax region orgItalic start=/\v\// skip=/\v\\./ end=/\v\//
-hi def orgItalic term=italic cterm=italic gui=italic
+"syntax region orgItalic start=/\v\// skip=/\v\\./ end=/\v\//
+"hi def orgItalic term=italic cterm=italic gui=italic
 
 syntax region orgUnderline start=/\v\\_/ skip=/\v\\./ end=/\v\\_/
 hi def orgUnderline term=underline cterm=underline gui=underline
