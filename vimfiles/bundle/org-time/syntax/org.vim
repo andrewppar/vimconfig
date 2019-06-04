@@ -19,10 +19,20 @@ highlight link orgOperator Operator
 highlight link orgKeyword Statement 
 
 syntax match orgTimeStamp "\v\<\d\d\d\d-\d\d-\d\d \w\w\w \d\d:\d\d\>"
+syntax match orgTimeStamp "\v\<\d\d\d\d-\d\d-\d\d \w\w\w \d\d:\d\d\ \+\d*\S\>"
 syntax keyword orgTimeStamp CLOSED SCHEDULED
 highlight link orgTimeStamp Tag
 
 syntax match orgComment "\v#.*$" 
 highlight link orgComment Comment
+
+syntax match orgHighPriority "\v\[#A\]"
+highlight link orgHighPriority Constant
+ 
+syntax match orgMedPriority "\v\[#B\]"
+highlight link orgMedPriority Float
+
+syntax match orgLowPriority "\v\[#C\]" 
+highlight link orgLowPriority Keyword
 
 let b:current_syntax = "org"

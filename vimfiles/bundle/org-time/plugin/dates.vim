@@ -6,6 +6,7 @@
 " ============================================================================= 
 
 " -- Manage Dates --{{{
+let g:days=["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 function! GetDayFromBuffer () 
   let l:line=getline('.')
@@ -24,7 +25,6 @@ function! GetDayFromBuffer ()
 endfunction 
 
 function! GetDayFromYearMonthDay (year, month, day)
-  let l:days=["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
   let l:months=[31,28,31,30,31,30,31,31,30,31,30,31]
   "@todo there is a probably a more elegant algorithm, but this seems pretty 
   " performant so whatevs. Fix it if you want bro. 
@@ -44,7 +44,7 @@ function! GetDayFromYearMonthDay (year, month, day)
     endif 
   endfor
   let l:daysum += (a:day - 1)
-  return l:days[(l:daysum + l:jan_first) % 7]
+  return g:days[(l:daysum + l:jan_first) % 7]
 endfunction
 
 function! InsertTimeStamp ()
@@ -89,13 +89,13 @@ let g:todo_keylist=["TODO ", "IN PROGRESS ", "DONE "]
 let g:last_todo_idx=len(g:todo_keylist) - 1
 
 function! CycleTodoKeys ()
-  "@NOTE This function assumes that TodoLineWithKeys will either 
+  "@NOTE This function assumes that CurrenLineTodoLineWithKeys will either 
   "return 0, 1, or a string keyword from g:todo_keylist 
   "@todo Bro you should really be programmin a little more robustly. 
   "@return This function will return 1 or 0 depending on whether it
   "was on a star line. If it was, it will insert the next todo key in 
   "the cycle and return 1. Otherwise it will do nothing and return 0. 
-  let l:possibly_outline_depth_or_todo_key=TodoLineWithKeys(g:todo_keylist) 
+  let l:possibly_outline_depth_or_todo_key=CurrenLineTodoLineWithKeys(g:todo_keylist) 
   if index(g:todo_keylist, l:possibly_outline_depth_or_todo_key) >= 0 
     " Get the next todo keyword
     let l:next_key=NextTodoKey(l:possibly_outline_depth_or_todo_key)
@@ -147,7 +147,6 @@ function! OutlineItemDepth (line)
   if empty(l:split_line)
     return 0
   else 
-
     let l:possibly_stars=l:split_line[0]
     if !empty(matchstr(l:possibly_stars, '\**'))
       return strlen(l:possibly_stars)
@@ -174,14 +173,18 @@ function! InitialStringMatch(longstring, substring)
   endif
 endfunction
 
-function! TodoLineWithKeys(keywords)
+function! CurrenLineTodoLineWithKeys(keywords)
   "@return the todo keyword if there is one 
   "otherwise it returns 1 if the line is an outline line
   "otherwise it returns 0.
   let l:line=getline('.')
-  let l:outline_depth=OutlineItemDepth(l:line)
+  return TodoLineWithKeys(l:line, a:keywords)
+endfunction
+
+function! TodoLineWithKeys(line, keywords)
+  let l:outline_depth=OutlineItemDepth(a:line)
   if l:outline_depth 
-    let l:line_init=strpart(l:line,(l:outline_depth + 1))
+    let l:line_init=strpart(a:line,(l:outline_depth + 1))
     let l:key=""
     let l:index=0
     let l:max=len(a:keywords) 
@@ -202,13 +205,66 @@ function! TodoLineWithKeys(keywords)
   endif 
 endfunction 
 
+function! TestGetTodoDictionary()
+  ""DOES IT WORK? 
+  for item in
+  endfunction 
+
+function! GetTodoDictionary()
+  "This function looks at the current file 
+  "@todo expand to look at a group of files
+  "and generates a dictionary of all the non-finished todo items 
+  "along with their associated dates. 
+  let l:todo_dictionary = {}
+  let l:last_line_number=line('$') 
+  let l:current_line_number=0
+  let l:last_todo=g:todo_keylist[-1]
+  while l:current_line_number <= l:last_line_number
+    let l:current_line=line(l:current_line_number)
+    let l:current_todo=TodoLineWithKeys(l:current_line, g:todo_keylist)
+    if index(g:todo_keylist, l:current_todo) && l:current_todo !==# l:last_todo 
+      let l:next_line=line(l:current_line_number + 1)
+      let l:org_date=OrgDateLineP(l:next_line)
+      if l:org_date >= 0
+        let l:todo_item=TodoLineTodoItem(l:current_line)
+        let l:todo_dictionary[l:todo_item]=l:org_date
+      else: 
+        let l:todo_dictionary[l:todo_item]="" 
+      endif
+    endif
+  endwhile 
+  return l:todo_dictionary
+endfunction
+
+function! TodoLineTodoItem(line) 
+  let l:depth=OutlineItemDepth(a:line)
+  if l:depth>0
+    return strpart(a:line,l:depth)
+  else
+    return ""
+  endif 
+endfunction
+
+function! OrgDateLineP(line)
+  if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\>') !=? ""
+    return 1
+  endif
+  if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+\d*\S>') !=? ""
+    return 1
+  endif
+  return 0 
+endfunction 
+
+
+
+
 function! FinishedLineWithCloseTime()
   "@return 1, if the current line is the last line in g:todo_keylist. 
   "if there is a closed:... line underneath that gets deleted. 
   "@return 0, otherwise. 
   let l:line_num=line('.')
   let l:line=getline(l:line_num)
-  let finish_line=TodoLineWithKeys([g:todo_keylist[-1]])
+  let finish_line=CurrenLineTodoLineWithKeys([g:todo_keylist[-1]])
   if finish_line ==# g:todo_keylist[-1]
     return 1
   else 
@@ -232,4 +288,71 @@ function! OutlineNewline ()
   execute ":normal! o" . l:stars . " " 
   return 1
 endfunction
+"  }}}
+" -- Org Agenda --- {{{
+
+let g:agenda_vertial_p=1
+
+function! OrgAgenda() 
+  "@todo fix *agenda* to be easily mode recognizable
+  if g:agenda_vertial_p
+    execute ":vsp *agenda*"
+  else
+    execute ":sp *agenda*"
+  endif 
+  setlocal modifiable
+  setlocal buftype=nofile
+  execute ":normal! iOrg Agenda"
+  execute ":normal! o------------------------------------------------"
+  let l:current_month_name=strftime("%b")
+  execute ":normal! o" . l:current_month_name
+  let l:current_month=strftime("%m")
+  let l:current_day=strftime("%d")
+  let l:current_year=strftime("%Y")
+  let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year)
+  for day in g:days
+    let l:current_date=l:weekday_dict[l:day]
+    execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
+  endfor 
+  setlocal nomodifiable
+endfunction
+
+let g:month_length_dictionary={'01':31, '02':28, '03':31, '04':30, '05':31, '06':30, '07': 31, '08':31, '09':30, '10':31, '11':30, '12':31}
+
+function! CurrentWeekDayDictionary(current_day, current_month, current_year)
+  let l:weekday=GetDayFromYearMonthDay(a:current_year, a:current_month, a:current_day)
+  let l:weekdays={}
+  let l:current_weekday_count=index(g:days,l:weekday) 
+  let l:day_count=l:current_weekday_count 
+  let l:month_length=g:month_length_dictionary[a:current_month]
+  while l:day_count >= 0
+    let l:potential_loop_day=a:current_day - (l:current_weekday_count - l:day_count)
+    if l:potential_loop_day < 1 
+      let l:loop_day=g:month_length_dictionary[(a:current_month -1)] - (abs(l:potential_loop_day) + 1)
+    else
+      let l:loop_day=l:potential_loop_day 
+    endif 
+    let l:loop_weekday=g:days[l:day_count]
+    let l:weekdays[l:loop_weekday]=l:loop_day
+    let l:day_count-= 1
+  endwhile
+  let l:day_count=l:current_weekday_count+1
+  while l:day_count <= 6
+    let l:potential_loop_day=a:current_day + (l:day_count - l:current_weekday_count)
+    if l:potential_loop_day > l:month_length 
+      let l:loop_day=l:potential_loop_day - l:month_length
+    else 
+      let l:loop_day=l:potential_loop_day
+    endif 
+    let l:loop_weekday=g:days[l:day_count]
+    let l:weekdays[l:loop_weekday]=l:loop_day
+    let l:day_count+= 1
+  endwhile 
+  return l:weekdays
+endfunction
+
+
+
+
+
 "  }}}
