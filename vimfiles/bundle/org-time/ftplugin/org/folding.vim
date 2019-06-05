@@ -14,7 +14,10 @@ function! OrgFold(linum)
     return '='
   endif 
   if l:line =~? '\v\s*CLOSED:'
-    return l:prev_depth
+    return '='
+  endif 
+  if l:line =~? '\v\s*DEADLINE:'
+    return '='
   endif 
   if l:line =~? '\v\s*\<\d\d\d\d-\d\d-\d\d \w\w\w \d\d:\d\d\>'
     return l:prev_depth
