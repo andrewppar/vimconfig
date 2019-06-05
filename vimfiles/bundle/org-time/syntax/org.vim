@@ -10,7 +10,6 @@ syntax region orgItalic start=/\v\// skip=/\v\\./ end=/\v\// keepend oneline
 hi def orgItalic term=italic cterm=italic gui=italic
 
 syntax region orgUnderline start=/\v\\_/ skip=/\v\\./ end=/\v\\_/ keepend oneline
-
 hi def orgUnderline term=underline cterm=underline gui=underline
 
 syntax match orgOperator "\v^\**" nextgroup=orgKeyword skipwhite
