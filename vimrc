@@ -88,7 +88,7 @@ augroup filetype_org
 
   autocmd BufEnter *.org set nospell
   autocmd FileType org nnoremap <leader>t :call CycleTodoKeys()<CR> 
-  autocmd FileType org inoremap <esc><C-M> :call OutlineNewline()<CR>i
+  autocmd FileType org inoremap <C-M> <C-o>:call OutlineNewline()<CR>
   autocmd FileType org nnoremap <C-M> :call OutlineNewline()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
 augroup END

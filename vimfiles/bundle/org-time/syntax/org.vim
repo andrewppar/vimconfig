@@ -3,13 +3,14 @@ if exists("b:current_syntax")
 endif
 
 "Org todo Keywords
-syntax region orgBold start=/\v\*/ skip=/\v\\./ end=/\v\*/
+syntax region orgBold start=/\v\*/ skip=/\v\\./ end=/\v\*/ keepend oneline
 hi def orgBold term=bold cterm=bold gui=bold 
 
-"syntax region orgItalic start=/\v\// skip=/\v\\./ end=/\v\//
-"hi def orgItalic term=italic cterm=italic gui=italic
+syntax region orgItalic start=/\v\// skip=/\v\\./ end=/\v\// keepend oneline
+hi def orgItalic term=italic cterm=italic gui=italic
 
-syntax region orgUnderline start=/\v\\_/ skip=/\v\\./ end=/\v\\_/
+syntax region orgUnderline start=/\v\\_/ skip=/\v\\./ end=/\v\\_/ keepend oneline
+
 hi def orgUnderline term=underline cterm=underline gui=underline
 
 syntax match orgOperator "\v^\**" nextgroup=orgKeyword skipwhite
