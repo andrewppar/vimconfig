@@ -174,10 +174,24 @@ augroup END
 "}}}
 " SPARQL -- {{{
 augroup filetype_sparql
-  autocmd!  
-  autocmd BufRead,BufNewFile *.rq set filetype=sparql 
-augroup END
+      autocmd!  
+      autocmd BufRead,BufNewFile *.rq set filetype=sparql 
+      autocmd FileType sparql nnoremap <leader>c :w<CR>:call RunSPARQLQuery()<CR>
+    augroup END
+
+    let g:anzo_dataset="http://cambridgesemantics.com/Graphmart/5a91659ba378496da362b45ab0b8c1f6"
+    let g:anzo_ds="http://cambridgesemantics.com/GqeDatasource/guid_60e7422088ca4208afc048c00c0fc715"
+
+    function! RunSPARQLQuery() 
+      execute "! anzo query -u sysadmin -w @nz0 -ds " . g:anzo_ds . " -dataset " . g:anzo_dataset . " -f " . '%' . " -y" 
+    endfunction 
 "}}}
+" JSON -- {{{ 
+augroup filetype_json
+  autocmd! 
+  autocmd BufRead,BufNewFile *.json set filetype=json
+  autocmd FileType json nnoremap gg=G :%!python -m json.tool<cr>
+" }}}
 "}}}
 " --  Scratch --- {{{
 function! SourceCurrentBuffer ()
