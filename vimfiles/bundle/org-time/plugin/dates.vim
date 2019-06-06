@@ -70,7 +70,7 @@ function! GenerateTimeStampInternal(use_today_p, use_now_p)
     let l:year=input("Year: ") 
   endif
   if a:use_now_p
-    let l:time=strftime("%I:%M")
+    let l:time=strftime("%H:%M")
   else
     let l:time=input("Time: ")
   endif
@@ -82,6 +82,18 @@ function! GenerateTimeStamp(day, month, year, time)
   let l:weekday=GetDayFromYearMonthDay(a:year, a:month, a:day)
   return  "<" . a:year . "-" . a:month . "-" . a:day . " " . l:weekday . " " . a:time .">"
 endfunction 
+
+function! GetDateFromOrgDate(org_date)
+  let l:clean_string = substitute(a:org_date, '^\s*\(.\{-}\)\s*$', '\1', '') 
+  return strpart(l:clean_string,1,10)
+endfunction
+
+function! GetTimeFromOrgDate(org_date)
+  let l:clean_string = substitute(a:org_date, '^\s*\(.\{-}\)\s*$', '\1', '') 
+   "@start This is still returning things like "10:10>"
+  return strpart(l:clean_string,16,19)
+endfunction
+
 
 " --}}}
 " -- Manage Todos -- {{{ 
@@ -205,11 +217,6 @@ function! TodoLineWithKeys(line, keywords)
   endif 
 endfunction 
 
-function! TestGetTodoDictionary()
-  ""DOES IT WORK? 
-  for item in
-  endfunction 
-
 function! GetTodoDictionary()
   "This function looks at the current file 
   "@todo expand to look at a group of files
@@ -220,18 +227,28 @@ function! GetTodoDictionary()
   let l:current_line_number=0
   let l:last_todo=g:todo_keylist[-1]
   while l:current_line_number <= l:last_line_number
-    let l:current_line=line(l:current_line_number)
+    let l:current_line=getline(l:current_line_number)
     let l:current_todo=TodoLineWithKeys(l:current_line, g:todo_keylist)
-    if index(g:todo_keylist, l:current_todo) && l:current_todo !==# l:last_todo 
-      let l:next_line=line(l:current_line_number + 1)
+    "echom "LINE" 
+    "echom l:current_line
+    "echom "CURRENT TODO" 
+    "echom l:current_todo
+    if index(g:todo_keylist, l:current_todo) >= 0 && l:current_todo !=# l:last_todo 
+      "echom "FOUND USEFUL LINE"
+      let l:next_line=getline(l:current_line_number + 1)
+      "echom "NEXT LINE" 
+      "echom l:next_line
       let l:org_date=OrgDateLineP(l:next_line)
-      if l:org_date >= 0
-        let l:todo_item=TodoLineTodoItem(l:current_line)
-        let l:todo_dictionary[l:todo_item]=l:org_date
-      else: 
+      "echom "DATE?"
+      "echom l:org_date
+      let l:todo_item=TodoLineTodoItem(l:current_line)
+      if l:org_date > 0 
+        let l:todo_dictionary[l:todo_item]=l:next_line 
+      else 
         let l:todo_dictionary[l:todo_item]="" 
       endif
     endif
+    let l:current_line_number=l:current_line_number + 1
   endwhile 
   return l:todo_dictionary
 endfunction
@@ -254,9 +271,6 @@ function! OrgDateLineP(line)
   endif
   return 0 
 endfunction 
-
-
-
 
 function! FinishedLineWithCloseTime()
   "@return 1, if the current line is the last line in g:todo_keylist. 
@@ -294,7 +308,18 @@ endfunction
 let g:agenda_vertial_p=1
 
 function! OrgAgenda() 
-  "@todo fix *agenda* to be easily mode recognizable
+  "@todo fix *agenda* to be easily mode recognizable 
+  let l:todo_items=GetTodoDictionary()
+  let l:timeless_todos=[]
+  let l:timed_todos={} 
+  for todo_item in keys(l:todo_items)
+    let l:todo_time=l:todo_items[l:todo_item]
+    if l:todo_time ==? ""
+      let l:timeless_todos=add(l:timeless_todos,l:todo_item)
+    else
+      let l:timed_todos[l:todo_item]=l:todo_time
+    endif 
+  endfor
   if g:agenda_vertial_p
     execute ":vsp *agenda*"
   else
@@ -302,8 +327,11 @@ function! OrgAgenda()
   endif 
   setlocal modifiable
   setlocal buftype=nofile
+  set ft=org 
   execute ":normal! iOrg Agenda"
   execute ":normal! o------------------------------------------------"
+  call PrintTimelessTodoItems(l:timeless_todos)
+  execute ":normal! o"
   let l:current_month_name=strftime("%b")
   execute ":normal! o" . l:current_month_name
   let l:current_month=strftime("%m")
@@ -311,11 +339,43 @@ function! OrgAgenda()
   let l:current_year=strftime("%Y")
   let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year)
   for day in g:days
+    "if day matches todo then print todo
+    "Do something special for today, i.e. expand it and add now
     let l:current_date=l:weekday_dict[l:day]
-    execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
+    call PrintOrgTodoItemsForDay(l:timed_todos, l:current_date, l:current_month, l:current_year)
+     execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
   endfor 
   setlocal nomodifiable
 endfunction
+
+function! PrintTodoItem(item, time)
+  execute "normal! o status: " . a:time . "...... " . a:item 
+endfunction
+
+function! PrintTimelessTodoItems(items)
+  for item in a:items
+    call PrintTodoItem(l:item, "     ")
+  endfor 
+endfunction 
+
+function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year)
+  for todo_item in keys(a:todo_dictionary) 
+    let l:timestamp=a:todo_dictionary[l:todo_item]
+    let l:scheduled_date=GetDateFromOrgDate(l:timestamp)
+    if a:year . "-" . a:month . "-" . TwoDigitNumberString(a:day) ==# l:scheduled_date 
+      let l:scheduled_time=GetTimeFromOrgDate(l:timestamp) 
+      call PrintTodoItem(l:todo_item, l:scheduled_time) 
+    endif  
+  endfor
+endfunction
+
+function! TwoDigitNumberString(number_string)
+  if a:number_string < 10 && a:number_string > -10
+    return "0" . a:number_string
+  else 
+    return a:number_string
+  endif
+endfunction 
 
 let g:month_length_dictionary={'01':31, '02':28, '03':31, '04':30, '05':31, '06':30, '07': 31, '08':31, '09':30, '10':31, '11':30, '12':31}
 
