@@ -285,7 +285,7 @@ function! OutlineNewline ()
     let l:stars=l:stars . "*"
     let l:star_count=l:star_count + 1
   endwhile
-  execute ":normal! o" . l:stars . " " 
+  execute ":normal! o" . l:stars 
   return 1
 endfunction
 "  }}}

@@ -88,8 +88,8 @@ augroup filetype_org
 
   autocmd BufEnter *.org set nospell
   autocmd FileType org nnoremap <leader>t :call CycleTodoKeys()<CR> 
-  autocmd FileType org inoremap <C-M> <C-o>:call OutlineNewline()<CR>
-  autocmd FileType org nnoremap <C-M> :call OutlineNewline()<CR>
+  autocmd FileType org inoremap ,,d <C-o>:call OutlineNewline()<CR>
+  " autocmd FileType org nnoremap <C-M> :call OutlineNewline()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
 augroup END
 
@@ -168,8 +168,7 @@ function! CompilePython ()
 endfunction
 augroup filetype_python 
   autocmd!
-  autocmd FileType python nnoremap <leader>b :w<CR>:call CompilePython()<CR>
-  autocmd FileType python nnoremap <leader>c I#<esc> 
+  autocmd FileType python nnoremap <leader>c :w<CR>:call CompilePython()<CR>
 augroup END
 "}}}
 " SPARQL -- {{{
@@ -179,11 +178,12 @@ augroup filetype_sparql
       autocmd FileType sparql nnoremap <leader>c :w<CR>:call RunSPARQLQuery()<CR>
     augroup END
 
-    let g:anzo_dataset="http://cambridgesemantics.com/Graphmart/5a91659ba378496da362b45ab0b8c1f6"
-    let g:anzo_ds="http://cambridgesemantics.com/GqeDatasource/guid_60e7422088ca4208afc048c00c0fc715"
+    let g:anzo_dataset="http://cambridgesemantics.com/Graphmart/584241c448724ef6a0a49bdcfee79501"
+    let g:anzo_ds="http://cambridgesemantics.com/GqeDatasource/guid_b7dae89e5c754628fda6e6654ddd4d79"
 
     function! RunSPARQLQuery() 
-      execute "! anzo query -u sysadmin -w @nz0 -ds " . g:anzo_ds . " -dataset " . g:anzo_dataset . " -f " . '%' . " -y" 
+      echom "! anzo query -u sysadmin -w 123 -ds " . g:anzo_ds . " -dataset " . g:anzo_dataset . " -f " . '%' . " -y" 
+      execute "! anzo query -u sysadmin -w 123 -ds " . g:anzo_ds . " -dataset " . g:anzo_dataset . " -f " . '%' . " -y" 
     endfunction 
 "}}}
 " JSON -- {{{ 
