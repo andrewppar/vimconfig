@@ -90,8 +90,7 @@ endfunction
 
 function! GetTimeFromOrgDate(org_date)
   let l:clean_string = substitute(a:org_date, '^\s*\(.\{-}\)\s*$', '\1', '') 
-   "@start This is still returning things like "10:10>"
-  return strpart(l:clean_string,16,19)
+  return strpart(l:clean_string,16,5)
 endfunction
 
 
@@ -342,8 +341,8 @@ function! OrgAgenda()
     "if day matches todo then print todo
     "Do something special for today, i.e. expand it and add now
     let l:current_date=l:weekday_dict[l:day]
+    execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
     call PrintOrgTodoItemsForDay(l:timed_todos, l:current_date, l:current_month, l:current_year)
-     execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
   endfor 
   setlocal nomodifiable
 endfunction
