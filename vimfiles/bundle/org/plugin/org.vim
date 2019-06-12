@@ -1,5 +1,5 @@
 " =============================================================================
-" Filename: time/dates.vim
+" Filename: plugin/org.vim
 " Author: andrewppar
 " License: None
 " Last Change: 2019-05-21 
@@ -336,18 +336,20 @@ function! OrgAgenda()
   let l:current_month=strftime("%m")
   let l:current_day=strftime("%d")
   let l:current_year=strftime("%Y")
-  let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year)
+  let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year) 
   for day in g:days
     "if day matches todo then print todo
     "Do something special for today, i.e. expand it and add now
     let l:current_date=l:weekday_dict[l:day]
     execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
-    call PrintOrgTodoItemsForDay(l:timed_todos, l:current_date, l:current_month, l:current_year)
+    let l:today_p=l:current_date ==# l:current_day 
+    call PrintOrgTodoItemsForDay(l:timed_todos, l:current_date, l:current_month, l:current_year, l:today_p)
   endfor 
   setlocal nomodifiable
 endfunction
 
 function! PrintTodoItem(item, time)
+  "Conditionalise if time is 
   execute "normal! o status: " . a:time . "...... " . a:item 
 endfunction
 
@@ -357,16 +359,55 @@ function! PrintTimelessTodoItems(items)
   endfor 
 endfunction 
 
-function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year)
+function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year, today_p)
+  let l:todo_items_for_day={}
+  if a:today_p
+    "@todo turn this into it's own function
+    let l:current_day_hour=9
+    while l:current_day_hour<19
+      let l:hourstring=TwoDigitNumberString(l:current_day_hour)
+      let l:timestamp_for_hour_today=l:hourstring . ":00"
+      let l:todo_items_for_day[l:timestamp_for_hour_today]=""
+      let l:current_day_hour=l:current_day_hour+1
+    endwhile 
+  endif
   for todo_item in keys(a:todo_dictionary) 
     let l:timestamp=a:todo_dictionary[l:todo_item]
     let l:scheduled_date=GetDateFromOrgDate(l:timestamp)
     if a:year . "-" . a:month . "-" . TwoDigitNumberString(a:day) ==# l:scheduled_date 
       let l:scheduled_time=GetTimeFromOrgDate(l:timestamp) 
-      call PrintTodoItem(l:todo_item, l:scheduled_time) 
+      " @todo figure out what to do if there are multiple items at the same
+      " time 
+      let l:todo_items_for_day[l:scheduled_time]=l:todo_item
     endif  
   endfor
+  let l:sorted_keys=sort(keys(l:todo_items_for_day),"OrgTimeGreaterThan") 
+  for time in l:sorted_keys
+    let l:todo_item=l:todo_items_for_day[l:time]
+    call PrintTodoItem(l:todo_item, l:time)
+  endfor
 endfunction
+
+function! OrgTimeGreaterThan (time_1, time_2)
+  let l:hours_1=strpart(a:time_1,0,2)
+  let l:hours_2=strpart(a:time_2,0,2)
+  if l:hours_1 < l:hours_2
+    return -1
+  elseif l:hours_1 ==# l:hours_2
+    let  l:minutes_1=strpart(a:time_1,3,2) 
+    let l:minutes_2=strpart(a:time_2,3,2)
+    if l:minutes_1 < l:minutes_2
+      return -1
+    elseif l:minutes_1 ==# l:minutes_2 
+      return 0
+    else 
+      return 1
+    endif 
+  else
+    return 1
+  endif
+endfunction
+
 
 function! TwoDigitNumberString(number_string)
   if a:number_string < 10 && a:number_string > -10
@@ -409,9 +450,5 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
   endwhile 
   return l:weekdays
 endfunction
-
-
-
-
 
 "  }}}
