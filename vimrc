@@ -6,12 +6,17 @@ augroup filetype_vim
   autocmd FileType vim setlocal foldmethod=marker
 augroup end
 "}}} 
+" Set the path to do recursive search ---{{{
+set path+=** 
+"}}}
 " Turn on plugins --- {{{
 filetype plugin indent on
 filetype plugin on
 execute pathogen#infect()
 syntax on 
 filetype plugin indent on
+"Turn on ctags
+set tags=tags
 "}}}
 "Set up line numbering --- {{{
 set relativenumber
@@ -191,6 +196,11 @@ augroup filetype_json
   autocmd! 
   autocmd BufRead,BufNewFile *.json set filetype=json
   autocmd FileType json nnoremap gg=G :%!python -m json.tool<cr>
+" }}}
+" Mail -- {{{
+augroup filetype_mail
+  autocmd!
+  autocmd FileType mail set spell
 " }}}
 "}}}
 " --  Scratch --- {{{
