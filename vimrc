@@ -87,6 +87,10 @@ nnoremap <leader>f :tabedit
 nnoremap <C-c>e    :tabedit ~/.vimrc<cr>
 nnoremap <leader>e :source ~/.vimrc<cr>
 "}}}
+" Make the Cursor change with different modes --- {{{
+let &t_SI = "\e[6 q" 
+let &t_EI = "\e[2 q" 
+" }}}
 " Org Mode --- {{{
 augroup filetype_org
   autocmd! 
