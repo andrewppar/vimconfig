@@ -178,6 +178,7 @@ endfunction
 augroup filetype_python 
   autocmd!
   autocmd FileType python nnoremap <leader>c :w<CR>:call CompilePython()<CR>
+  autocmd FileType python vnoremap <leader>; :call CommentRegion("#")<cr>
 augroup END
 "}}}
 " SPARQL -- {{{
@@ -211,5 +212,13 @@ augroup filetype_mail
 function! SourceCurrentBuffer ()
   let l:file=expand('%F')
   execute ":source " . l:file
+endfunction
+
+function! CommentRegion (comment_string)
+  "@todo find a way of defining a string on a language basis. We can probably
+  "handle this with a G variable
+  let l:start=line("'<")
+  let l:end=line("'>")
+  execute l:start . "," . l:end . "norm I". a:comment_string
 endfunction
 "  --- }}}
