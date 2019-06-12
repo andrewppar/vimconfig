@@ -84,12 +84,14 @@ function! GenerateTimeStamp(day, month, year, time)
 endfunction 
 
 function! GetDateFromOrgDate(org_date)
-  let l:clean_string = substitute(a:org_date, '^\s*\(.\{-}\)\s*$', '\1', '') 
+  let l:clean_string = substitute(a:org_date, '^.*<\(.\{-}\)\s*$', '\1', '') 
+  "echom strpart(l:clean_string,1,10) 
   return strpart(l:clean_string,1,10)
 endfunction
 
 function! GetTimeFromOrgDate(org_date)
-  let l:clean_string = substitute(a:org_date, '^\s*\(.\{-}\)\s*$', '\1', '') 
+  let l:clean_string = substitute(a:org_date, '^\.*<\(.\{-}\)\s*$', '\1', '') 
+  "echom strpart(l:clean_string,16,5)
   return strpart(l:clean_string,16,5)
 endfunction
 
@@ -360,6 +362,7 @@ function! PrintTimelessTodoItems(items)
 endfunction 
 
 function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year, today_p)
+  echom "PRINT ORG TODO ITEMS" 
   let l:todo_items_for_day={}
   if a:today_p
     "@todo turn this into it's own function
@@ -372,6 +375,7 @@ function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year, today_p)
     endwhile 
   endif
   for todo_item in keys(a:todo_dictionary) 
+    echom l:todo_item
     let l:timestamp=a:todo_dictionary[l:todo_item]
     let l:scheduled_date=GetDateFromOrgDate(l:timestamp)
     if a:year . "-" . a:month . "-" . TwoDigitNumberString(a:day) ==# l:scheduled_date 

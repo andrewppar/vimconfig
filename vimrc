@@ -35,7 +35,7 @@ set background=dark
 set laststatus=2
 "}}}
 "Status Line --- {{{
-set statusline=%.20F\ %y%h%m%r\ %=%{v:register}\ Lines:\ %L\ %#Question#%{strftime('%a\ %b\ %e\ %H:%M')}
+set statusline=%.30F\ %y%h%m%r\ %=%{v:register}\ Lines:\ %L\ %#Question#%{strftime('%a\ %b\ %e\ %H:%M')}
 ""set statusline=%t[%{strlen(&fenc)?&fenc:'none'},%{&ff}]%h%m%r\ %=%{v:register}\ %l/%L\ %P\ %#Question#%{strftime('%a\ %b\ %e\ %I:%M')}
 set wrap linebreak nolist
 set tabstop=4 shiftwidth=2 expandtab
