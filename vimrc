@@ -85,7 +85,8 @@ nnoremap <leader>f :tabedit
 
 "Edit .vimrc while in another file. 
 nnoremap <C-c>e    :tabedit ~/.vimrc<cr>
-nnoremap <leader>e :source ~/.vimrc<cr>
+nnoremap <leader>e :call SourceCurrentBuffer()<cr>
+nnoremap <leader>sv :source ~/.vimrc<cr>
 "}}}
 " Make the Cursor change with different modes --- {{{
 let &t_SI = "\e[6 q" 

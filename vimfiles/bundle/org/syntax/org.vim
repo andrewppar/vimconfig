@@ -2,7 +2,7 @@ if exists("b:current_syntax")
   finish
 endif
 
-"Org todo Keywords
+"bold, italic, underline
 syntax region orgBold start=/\v\*/ skip=/\v\\./ end=/\v\*/ keepend oneline
 hi def orgBold term=bold cterm=bold gui=bold 
 
@@ -12,20 +12,24 @@ hi def orgItalic term=italic cterm=italic gui=italic
 syntax region orgUnderline start=/\v\\_/ skip=/\v\\./ end=/\v\\_/ keepend oneline
 hi def orgUnderline term=underline cterm=underline gui=underline
 
+"Org todo Keywords
 syntax match orgOperator "\v^\**" nextgroup=orgKeyword skipwhite
 syntax keyword orgKeyword TODO DONE contained 
 syntax match   orgKeyword "IN PROGRESS" contained
 highlight link orgOperator Operator
 highlight link orgKeyword Statement 
 
+"Time Stamp
 syntax match orgTimeStamp "\v\<\d\d\d\d-\d\d-\d\d \w\w\w \d\d:\d\d\>"
 syntax match orgTimeStamp "\v\<\d\d\d\d-\d\d-\d\d \w\w\w \d\d:\d\d\ \+\d*\S\>"
 syntax keyword orgTimeStamp CLOSED SCHEDULED
 highlight link orgTimeStamp Tag
 
+"Comment
 syntax match orgComment "\v#.*$" 
 highlight link orgComment Comment
 
+"Priorities
 syntax match orgHighPriority "\v\[#A\]"
 highlight link orgHighPriority Constant
  

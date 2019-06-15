@@ -84,13 +84,14 @@ function! GenerateTimeStamp(day, month, year, time)
 endfunction 
 
 function! GetDateFromOrgDate(org_date)
-  let l:clean_string = substitute(a:org_date, '^.*<\(.\{-}\)\s*$', '\1', '') 
-  "echom strpart(l:clean_string,1,10) 
+  let l:clean_string = matchstr(a:org_date, '\v\<.*\>') 
   return strpart(l:clean_string,1,10)
 endfunction
 
 function! GetTimeFromOrgDate(org_date)
-  let l:clean_string = substitute(a:org_date, '^\.*<\(.\{-}\)\s*$', '\1', '') 
+  "echom "GET_TIME_FROM_ORG_DATE"
+ " echom a:org_date
+  let l:clean_string = matchstr(a:org_date, '\v\<.*\>') 
   "echom strpart(l:clean_string,16,5)
   return strpart(l:clean_string,16,5)
 endfunction
@@ -309,7 +310,6 @@ endfunction
 let g:agenda_vertial_p=1
 
 function! OrgAgenda() 
-  "@todo fix *agenda* to be easily mode recognizable 
   let l:todo_items=GetTodoDictionary()
   let l:timeless_todos=[]
   let l:timed_todos={} 
@@ -321,14 +321,19 @@ function! OrgAgenda()
       let l:timed_todos[l:todo_item]=l:todo_time
     endif 
   endfor
-  if g:agenda_vertial_p
-    execute ":vsp *agenda*"
-  else
-    execute ":sp *agenda*"
-  endif 
+  "vertical or horizontal split
+"  if g:agenda_vertial_p
+"    execute ":vsp *agenda*"
+"  else
+"    execute ":sp *agenda*"
+"  endif 
+  "set up the buffer
   setlocal modifiable
   setlocal buftype=nofile
-  set ft=org 
+  set ft=org-agenda
+  "ensure there isn't anying already in the buffer
+  execute ":normal! gg0vG$dd"
+  "Set up the page
   execute ":normal! iOrg Agenda"
   execute ":normal! o------------------------------------------------"
   call PrintTimelessTodoItems(l:timeless_todos)
@@ -362,7 +367,7 @@ function! PrintTimelessTodoItems(items)
 endfunction 
 
 function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year, today_p)
-  echom "PRINT ORG TODO ITEMS" 
+  "echom "PRINT ORG TODO ITEMS" 
   let l:todo_items_for_day={}
   if a:today_p
     "@todo turn this into it's own function
@@ -373,9 +378,11 @@ function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year, today_p)
       let l:todo_items_for_day[l:timestamp_for_hour_today]=""
       let l:current_day_hour=l:current_day_hour+1
     endwhile 
+  "echom "GENERATED TODAY"
+  "echom a:today_p 
   endif
   for todo_item in keys(a:todo_dictionary) 
-    echom l:todo_item
+    "echom l:todo_item
     let l:timestamp=a:todo_dictionary[l:todo_item]
     let l:scheduled_date=GetDateFromOrgDate(l:timestamp)
     if a:year . "-" . a:month . "-" . TwoDigitNumberString(a:day) ==# l:scheduled_date 
