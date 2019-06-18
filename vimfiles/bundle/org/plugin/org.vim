@@ -2,7 +2,7 @@
 " Filename: plugin/org.vim
 " Author: andrewppar
 " License: None
-" Last Change: 2019-05-21 
+" Last Change: 2019-06-15
 " ============================================================================= 
 
 " -- Manage Dates --{{{
@@ -322,11 +322,11 @@ function! OrgAgenda()
     endif 
   endfor
   "vertical or horizontal split
-"  if g:agenda_vertial_p
-"    execute ":vsp *agenda*"
-"  else
-"    execute ":sp *agenda*"
-"  endif 
+  if g:agenda_vertial_p
+    execute ":vsp *agenda*"
+  else
+    execute ":sp *agenda*"
+  endif 
   "set up the buffer
   setlocal modifiable
   setlocal buftype=nofile

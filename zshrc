@@ -94,7 +94,12 @@ source $ZSH/oh-my-zsh.sh
 # For a full list of active aliases, run `alias`.
 #
 function weather () {
-  curl "http://wttr.in/Boston"
+ # curl "http://wttr.in/Boston"
+ if [ -z $1 ]
+ then LOCATION="Boston"
+ else LOCATION=$1
+ fi 
+ curl "http://wttr.in/$LOCATION"
 }
 
 function up () {

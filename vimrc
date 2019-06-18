@@ -133,10 +133,10 @@ augroup filetype_tex
   "I also don't like the idea of 
   "linking my bash scripts to my 
   "vim scripts like this.  
-  
+
   autocmd FileType tex nnoremap <leader>c I%<esc>  
   " There's gotta be a better way to do this ^
-  
+
   "Check LaTeX word count
   nnoremap <leader>w :w !detex \| wc -w<CR>
   autocmd FileType tex nnoremap <leader>t :LatexTOC<CR>
@@ -184,29 +184,31 @@ augroup END
 "}}}
 " SPARQL -- {{{
 augroup filetype_sparql
-      autocmd!  
-      autocmd BufRead,BufNewFile *.rq set filetype=sparql 
-      autocmd FileType sparql nnoremap <leader>c :w<CR>:call RunSPARQLQuery()<CR>
-    augroup END
+  autocmd!  
+  autocmd BufRead,BufNewFile *.rq set filetype=sparql 
+  autocmd FileType sparql nnoremap <leader>c :w<CR>:call RunSPARQLQuery()<CR>
+augroup END
 
-    let g:anzo_dataset="http://cambridgesemantics.com/Graphmart/584241c448724ef6a0a49bdcfee79501"
-    let g:anzo_ds="http://cambridgesemantics.com/GqeDatasource/guid_b7dae89e5c754628fda6e6654ddd4d79"
+let g:anzo_dataset="http://cambridgesemantics.com/Graphmart/584241c448724ef6a0a49bdcfee79501"
+let g:anzo_ds="http://cambridgesemantics.com/GqeDatasource/guid_b7dae89e5c754628fda6e6654ddd4d79"
 
-    function! RunSPARQLQuery() 
-      echom "! anzo query -u sysadmin -w 123 -ds " . g:anzo_ds . " -dataset " . g:anzo_dataset . " -f " . '%' . " -y" 
-      execute "! anzo query -u sysadmin -w 123 -ds " . g:anzo_ds . " -dataset " . g:anzo_dataset . " -f " . '%' . " -y" 
-    endfunction 
+function! RunSPARQLQuery() 
+  echom "! anzo query -u sysadmin -w 123 -ds " . g:anzo_ds . " -dataset " . g:anzo_dataset . " -f " . '%' . " -y" 
+  execute "! anzo query -u sysadmin -w 123 -ds " . g:anzo_ds . " -dataset " . g:anzo_dataset . " -f " . '%' . " -y" 
+endfunction 
 "}}}
 " JSON -- {{{ 
 augroup filetype_json
   autocmd! 
   autocmd BufRead,BufNewFile *.json set filetype=json
   autocmd FileType json nnoremap gg=G :%!python -m json.tool<cr>
+augroup END
 " }}}
 " Mail -- {{{
 augroup filetype_mail
   autocmd!
   autocmd FileType mail set spell
+augroup END
 " }}}
 "}}}
 " --  Scratch --- {{{
