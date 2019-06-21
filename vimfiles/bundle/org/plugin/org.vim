@@ -89,11 +89,11 @@ function! GenerateTimeStamp(day, month, year, time)
 endfunction 
 
 function! GetDateFromOrgDate(org_date)
-return GetItemFromOrgDate(org_date, 1, 10)
+return GetItemFromOrgDate(a:org_date, 1, 10)
 endfunction
 
 function! GetTimeFromOrgDate(org_date)
-  return GetItemFromOrgDate(org_date, 16, 15)
+  return GetItemFromOrgDate(a:org_date, 16, 5)
 endfunction
 
 "function! getDay... maybe
