@@ -4,7 +4,12 @@
 " License: None
 " Last Change: 2019-06-15
 " ============================================================================= 
-
+" -- ToggleLines --- {{{
+" #todo we have to factor out the todo item and checkbox item code
+" so that the execution of a function is separate from the detection of 
+" what to execute. Then we can have one function that does the detection 
+" and propertly dispatches. 
+"  }}}
 " -- Manage Dates --{{{
 let g:days=["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -84,19 +89,31 @@ function! GenerateTimeStamp(day, month, year, time)
 endfunction 
 
 function! GetDateFromOrgDate(org_date)
-  let l:clean_string = matchstr(a:org_date, '\v\<.*\>') 
-  return strpart(l:clean_string,1,10)
+return GetItemFromOrgDate(org_date, 1, 10)
 endfunction
 
 function! GetTimeFromOrgDate(org_date)
-  "echom "GET_TIME_FROM_ORG_DATE"
- " echom a:org_date
-  let l:clean_string = matchstr(a:org_date, '\v\<.*\>') 
-  "echom strpart(l:clean_string,16,5)
-  return strpart(l:clean_string,16,5)
+  return GetItemFromOrgDate(org_date, 16, 15)
 endfunction
 
+"function! getDay... maybe
 
+function! GetItemFromOrgDate(org_date,start,end)
+  let l:clean_string = matchstr(a:org_date, '\v\<.*\>') 
+  return strpart(l:clean_string,a:start,a:end)
+endfunction
+
+function! IngestOrgDate(org_date_string, org_date_dictionary)
+  let l:year_month_day=split(a:org_date_string, "-")
+  let l:org_date_dictionary['y']=l:year_month_day[0]
+  let l:org_date_dictionary['m']=l:year_month_day[1]
+  let l:org_date_dictionary['d']=l:year_month_day[2]
+  return l:org_date_dictionary
+endfunction
+
+"function! IngestOrgDay(org_date_string, org_date_dictionary)
+"
+"endfunction
 " --}}}
 " -- Manage Todos -- {{{ 
 let g:todo_keylist=["TODO ", "IN PROGRESS ", "DONE "]
@@ -462,4 +479,31 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
   return l:weekdays
 endfunction
 
+"  }}}
+"  -- Check Boxes --- {{{ 
+function! ToggleCheckBox()
+  let l:line = getline('.')
+  if CheckBoxLine(l:line)
+    call CheckBoxLineCheckBox()
+  endif
+  if CheckBoxLineChecked(l:line)
+   call CheckBoxLineUncheckBox()
+ endif
+endfunction 
+
+function! CheckBoxLine(line)
+  return match(a:line, '^\(\s*\|\**\)\s*\[ \]') ==# 0
+endfunction
+
+function! CheckBoxLineChecked(line)
+  return match(a:line, '^\(\s*\|\**\)\s*\[X\]') ==# 0
+endfunction
+
+function! CheckBoxLineCheckBox()
+  execute ":.s/\\[ \\]/[X]/"
+endfunction
+
+function! CheckBoxLineUncheckBox()
+  execute ":s/\\[X\\]/[ ]/"
+endfunction
 "  }}}
