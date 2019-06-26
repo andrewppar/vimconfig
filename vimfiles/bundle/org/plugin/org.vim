@@ -9,6 +9,13 @@
 " so that the execution of a function is separate from the detection of 
 " what to execute. Then we can have one function that does the detection 
 " and propertly dispatches. 
+function! ToggleLines ()
+  let l:possibly_outline_depth_or_todo_key=CurrenLineTodoLineWithKeys(g:todo_keylist)
+  let l:ran_todo=CycleTodoKeysInternal(l:possibly_outline_depth_or_todo_key) 
+  if l:ran_todo ==# -1
+    call ToggleCheckBox()
+  endif 
+endfunction 
 "  }}}
 " -- Manage Dates --{{{
 let g:days=["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -89,7 +96,7 @@ function! GenerateTimeStamp(day, month, year, time)
 endfunction 
 
 function! GetDateFromOrgDate(org_date)
-return GetItemFromOrgDate(a:org_date, 1, 10)
+  return GetItemFromOrgDate(a:org_date, 1, 10)
 endfunction
 
 function! GetTimeFromOrgDate(org_date)
@@ -127,33 +134,46 @@ function! CycleTodoKeys ()
   "was on a star line. If it was, it will insert the next todo key in 
   "the cycle and return 1. Otherwise it will do nothing and return 0. 
   let l:possibly_outline_depth_or_todo_key=CurrenLineTodoLineWithKeys(g:todo_keylist) 
-  if index(g:todo_keylist, l:possibly_outline_depth_or_todo_key) >= 0 
-    " Get the next todo keyword
-    let l:next_key=NextTodoKey(l:possibly_outline_depth_or_todo_key)
-    let l:chars_to_delete=len(l:possibly_outline_depth_or_todo_key) 
-    " Delete the last keyword
-    execute ':normal! 0f ' . l:chars_to_delete . "xa" . l:next_key 
-    " If the new keyword is the last one, close the item.
-    "@todo make 'CLOSED" be indented the right amount
-    if l:next_key ==# g:todo_keylist[-1]
-      execute ':normal! o CLOSED: '
-      call InsertCurrentDateInformation()
-      execute ':normal! k'
-      "If the old keyword was the last remove any 
-      "old CLOSEDs
-    elseif l:possibly_outline_depth_or_todo_key ==# g:todo_keylist[-1]
-      let l:next_line=getline(line('.')+1)
-      if l:next_line =~# '^\s*CLOSED:'
-        execute 'normal! jddk'
-      endif 
-    endif
-    return 1 
-  elseif l:possibly_outline_depth_or_todo_key ==? 1 
+  return CycleTodoKeysInternal(l:possibly_outline_depth_or_todo_key)
+endfunction
+
+function! CycleTodoKeysInternal (possibly_outline_depth_or_todo_key)
+  if index(g:todo_keylist, a:possibly_outline_depth_or_todo_key) >= 0 
+    return CycleNextTodoKey(a:possibly_outline_depth_or_todo_key) 
+  elseif a:possibly_outline_depth_or_todo_key ==? 1 
     execute ':normal! 0f a' . g:todo_keylist[0]
     return 1
   else
-    return 0
+    return -1
   endif
+endfunction
+
+function! CycleNextTodoKey(current_todo_key)
+  " Get the next todo keyword
+  let l:next_key=NextTodoKey(a:current_todo_key)
+  let l:chars_to_delete=len(a:current_todo_key) 
+  " Delete the last keyword
+  execute ':normal! 0f ' . l:chars_to_delete . "xa" . l:next_key 
+  " If the new keyword is the last one, close the item.
+  "@todo make 'CLOSED" be indented the right amount
+  if l:next_key ==# g:todo_keylist[-1]
+    execute ':normal! o CLOSED: '
+    call InsertCurrentDateInformation()
+    "This is kk because our general toggling function requires it, calling
+    "this from CycleTodoKeysInternal does not require it. I have no idea why
+    "It might be night to put the extra k on the outside of this function, but
+    " I'm not sure how to do that. Maybe this function just has to be 
+    " private. 
+    execute ':normal! kk' 
+    "If the old keyword was the last remove any 
+    "old CLOSEDs
+  elseif a:current_todo_key ==# g:todo_keylist[-1]
+    let l:next_line=getline(line('.')+1)
+    if l:next_line =~# '^\s*CLOSED:'
+      execute 'normal! jddk'
+    endif 
+  endif
+  return 1 
 endfunction
 
 function! NextTodoKey(key) 
@@ -323,6 +343,10 @@ function! OutlineNewline ()
 endfunction
 "  }}}
 " -- Org Agenda --- {{{
+"  @todo currently we pull the items off the agend and then sort them for each
+"  day, we could really do this all at once with a single agenda. This has
+"  caused noticable lag when loading bigger todo files. It has not yet caused
+"  seriously objectionable lag but it probably will. 
 
 let g:agenda_vertial_p=1
 
@@ -395,8 +419,8 @@ function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year, today_p)
       let l:todo_items_for_day[l:timestamp_for_hour_today]=""
       let l:current_day_hour=l:current_day_hour+1
     endwhile 
-  "echom "GENERATED TODAY"
-  "echom a:today_p 
+    "echom "GENERATED TODAY"
+    "echom a:today_p 
   endif
   for todo_item in keys(a:todo_dictionary) 
     "echom l:todo_item
@@ -487,8 +511,8 @@ function! ToggleCheckBox()
     call CheckBoxLineCheckBox()
   endif
   if CheckBoxLineChecked(l:line)
-   call CheckBoxLineUncheckBox()
- endif
+    call CheckBoxLineUncheckBox()
+  endif
 endfunction 
 
 function! CheckBoxLine(line)

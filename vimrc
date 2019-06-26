@@ -97,9 +97,8 @@ augroup filetype_org
   autocmd! 
 
   autocmd BufEnter *.org set nospell
-  autocmd FileType org nnoremap <leader>t :call CycleTodoKeys()<CR> 
+  autocmd FileType org nnoremap <leader>t :call ToggleLines()<CR> 
   autocmd FileType org inoremap ,,d <C-o>:call OutlineNewline()<CR>
-  autocmd FileType org nnoremap ,c :call  ToggleCheckBox()<CR> 
   "@todo unify this ^ with CycleTodoKeys
   " autocmd FileType org nnoremap <C-M> :call OutlineNewline()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
@@ -210,6 +209,8 @@ augroup END
 augroup filetype_mail
   autocmd!
   autocmd FileType mail set spell
+  autocmd FileType mail setlocal fo+=aw
+
 augroup END
 " }}}
 "}}}
