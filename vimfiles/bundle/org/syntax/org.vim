@@ -31,12 +31,12 @@ highlight link orgComment Comment
 
 "CheckBoxes  "@todo question: What do we do with checkboxes embedded in
 "outlines as headers, e.g. ** [ ] ITEM
-syntax match orgUncheckedCheckLine "^\(\s\|\**\)\s*\[ \]" nextgroup=uncheckedBox skipwhite
+syntax match orgUncheckedCheckLine "^\(\s\|\**\)\s*\[ \]" nextgroup=uncheckedBox
 syntax match uncheckedBox "\[ \]" contained containedin=orgUncheckedCheckLine 
-highlight link orgUncheckedCheckLine Text
+highlight link orgUncheckedCheckLine Macro
 highlight link uncheckedBox Constant
 
-syntax match orgCheckedCheckLine "^\(\s\|\**\)\s*\[X\]" nextgroup=checkedBox skipwhite
+syntax match orgCheckedCheckLine "^\(\s\|\**\)\s*\[X\]" nextgroup=checkedBox 
 syntax match checkedBox "\[X\]" contained containedin=orgCheckedCheckLine
 highlight link orgCheckedCheckLine Text
 highlight link checkedBox Label
