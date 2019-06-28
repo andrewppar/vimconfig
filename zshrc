@@ -71,6 +71,7 @@ ZSH_THEME="lambda"
 plugins=(git cabal colored-man-pages colorize pip python brew osx)
 source $ZSH/oh-my-zsh.sh
 
+
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -111,6 +112,11 @@ function up () {
     steps=$[$steps+1]
   done 
 }
+
+function my_time () {
+  echo $(date | awk '{print $4}')
+}
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
+alias todo="vim ~/org/status.org"
