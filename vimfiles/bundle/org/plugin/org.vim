@@ -32,7 +32,7 @@ function! GetDayFromBuffer ()
     let l:result=GetDayFromYearMonthDay(l:year, l:month, l:day)
     execute ':normal! a ' . l:result . '>'
   else 
-    echom "Couldn't Find Date"
+    echoerr "Couldn't Find Date"
   endif 
 endfunction 
 
@@ -256,24 +256,34 @@ function! TodoLineWithKeys(line, keywords)
   endif 
 endfunction 
 
-function! GetTodoDictionary()
-  "This function looks at the current file 
+let g:efficient_sort=0
+
+function! GetTodoDictionary() 
   "@todo expand to look at a group of files
+  "This function looks at the current file 
   "and generates a dictionary of all the non-finished todo items 
   "along with their associated dates. 
+  " @return a dictionary with the following structure
+  " {DATE : {TIME : [ITEM]}} 
+  " For todo items with no date, they are stored as date 0000-00-00 
   let l:todo_dictionary = {}
   let l:last_line_number=line('$') 
   let l:current_line_number=0
   let l:last_todo=g:todo_keylist[-1]
+  "Loop through the lines in the file
   while l:current_line_number <= l:last_line_number
+    "Get the current line
     let l:current_line=getline(l:current_line_number)
+    " check if it is a todo line
     let l:current_todo=TodoLineWithKeys(l:current_line, g:todo_keylist)
     "echom "LINE" 
     "echom l:current_line
     "echom "CURRENT TODO" 
     "echom l:current_todo
+    "If it is and it's not 'DONE'
     if index(g:todo_keylist, l:current_todo) >= 0 && l:current_todo !=# l:last_todo 
       "echom "FOUND USEFUL LINE"
+      "Check for a date. 
       let l:next_line=getline(l:current_line_number + 1)
       "echom "NEXT LINE" 
       "echom l:next_line
@@ -282,15 +292,46 @@ function! GetTodoDictionary()
       "echom l:org_date
       let l:todo_item=TodoLineTodoItem(l:current_line)
       if l:org_date > 0 
-        let l:todo_dictionary[l:todo_item]=l:next_line 
+        "Experimental  -- {DATE:{TIME:[ITEM]}}
+        if g:efficient_sort > 0
+          let l:todo_date=GetDateFromOrgDate(l:next_line)
+          let l:todo_time=GetTimeFromOrgDate(l:next_line)
+          if has_key(l:todo_dictionary, l:todo_date)
+            let l:date_entry=l:todo_dictionary[l:todo_date]
+            if has_key(l:date_entry,l:todo_time)
+              let l:time_entries=l:date_entry[l:todo_time]
+              let l:time_entries=add(l:date_entry,l:current_todo)
+            else 
+              let l:date_entry[l:todo_time]=[l:current_todo]
+            endif
+          else
+            let l:todo_dictionary[l:todo_date]={l:todo_time:[l:current_todo]}
+          endif 
+          "End Experimental
+        else 
+          let l:todo_dictionary[l:todo_item]=l:next_line 
+        endif 
       else 
-        let l:todo_dictionary[l:todo_item]="" 
+        "Experimental -- {DATE:{TIME:[ITEM]}}
+        if g:efficient_sort > 0
+          if has_key(l:todo_dictionary,"0000-00-00")
+            let l:dateless_todos=l:todo_dictionary["0000-00-00"]
+            let l:timeless_todos=l:dateless_todos["00:00"]
+            let l:timeless_todos=add(l:timeless_todos,l:todo_item) 
+          else 
+            let l:todo_dictionary["0000-00-00"]={"00:00":[l:todo_item]}
+          endif 
+          "end Experimental
+        else
+          let l:todo_dictionary[l:todo_item]="" 
+        endif 
       endif
     endif
     let l:current_line_number=l:current_line_number + 1
   endwhile 
   return l:todo_dictionary
 endfunction
+
 
 function! TodoLineTodoItem(line) 
   let l:depth=OutlineItemDepth(a:line)
@@ -348,7 +389,7 @@ endfunction
 "  caused noticable lag when loading bigger todo files. It has not yet caused
 "  seriously objectionable lag but it probably will. 
 
-let g:agenda_vertial_p=1
+let g:agenda_vertical_p=1
 
 function! OrgAgenda() 
   let l:todo_items=GetTodoDictionary()
@@ -363,7 +404,7 @@ function! OrgAgenda()
     endif 
   endfor
   "vertical or horizontal split
-  if g:agenda_vertial_p
+  if g:agenda_vertical_p
     execute ":vsp *agenda*"
   else
     execute ":sp *agenda*"
@@ -394,6 +435,56 @@ function! OrgAgenda()
     call PrintOrgTodoItemsForDay(l:timed_todos, l:current_date, l:current_month, l:current_year, l:today_p)
   endfor 
   setlocal nomodifiable
+endfunction
+
+function! OrgAgendaAlt()
+  let g:efficient_sort=1 
+  let l:todo_item_dictionary=GetTodoDictionary()
+  let timeless_todos=l:todo_item_dictionary["0000-00-00"]
+  "vertical or horizontal split
+  if g:agenda_vertical_p
+    execute ":vsp *agenda*"
+  else
+    execute ":sp *agenda*"
+  endif 
+  "set up the buffer
+  setlocal modifiable
+  setlocal buftype=nofile
+  set ft=org-agenda
+  "ensure there isn't anying already in the buffer
+  execute ":normal! gg0vG$dd"
+  "Set up the page
+  execute ":normal! iOrg Agenda"
+  execute ":normal! o------------------------------------------------"
+  call PrintTimelessTodoItems(l:timeless_todos["00:00"])
+  execute ":normal! o"
+  let l:current_month_name=strftime("%b")
+  execute ":normal! o" . l:current_month_name
+  let l:current_month=strftime("%m")
+  let l:current_day=strftime("%d")
+  let l:current_year=strftime("%Y")
+  let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year) 
+    for day in g:days
+    "if day matches todo then print todo
+    "Do something special for today, i.e. expand it and add now
+    let l:current_date_and_datestamp=l:weekday_dict[l:day]
+    let l:current_date=l:current_date_and_datestamp[0]
+    let l:current_year_month_day_date=l:current_date_and_datestamp[1]
+    execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
+    let l:today_p=l:current_date ==# l:current_day 
+    if has_key(l:todo_item_dictionary, l:current_year_month_day_date)
+      let l:day_dictionary=l:todo_item_dictionary[l:current_year_month_day_date] 
+      call printOrgTodoItemsForDayAlt(l:day_dictionary, l:current_day) 
+    endif 
+  endfor
+endfunction
+
+function! PrintOrgTodoItemsForDayAlt(todo_day_dictionary, day)
+  let l:sorted_keys=sort(keys(l:todo_day_dictionary), "OrgTimeGreaterThan")
+  for time in l:sorted_keys
+    let l:todo_item=l:todo_day_dictionary[l:time]
+    call PrintTodoItem(l:todo_item, l:time)
+  endfor
 endfunction
 
 function! PrintTodoItem(item, time)
@@ -477,15 +568,28 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
   let l:current_weekday_count=index(g:days,l:weekday) 
   let l:day_count=l:current_weekday_count 
   let l:month_length=g:month_length_dictionary[a:current_month]
+  let l:current_date=""
   while l:day_count >= 0
+    echom "date"
+    echom l:day_count
     let l:potential_loop_day=a:current_day - (l:current_weekday_count - l:day_count)
     if l:potential_loop_day < 1 
-      let l:loop_day=g:month_length_dictionary[(a:current_month -1)] - (abs(l:potential_loop_day) + 1)
+      echom "HERE"
+      let l:loop_day=g:month_length_dictionary[TwoDigitNumberString(a:current_month -1)] - (abs(l:potential_loop_day) + 1)
+      echom l:potential_loop_day
+      echom a:current_month 
+      echom l:loop_day
+      let l:loop_date=a:current_year . "-" . (a:current_month - 1) . "-" . l:loop_day
     else
       let l:loop_day=l:potential_loop_day 
+      let l:loop_date=a:current_year . "-" . a:current_month . "-" . l:loop_day
     endif 
     let l:loop_weekday=g:days[l:day_count]
-    let l:weekdays[l:loop_weekday]=l:loop_day
+    if g:efficient_sort
+      let l:weekdays[l:loop_weekday]=[l:loop_weekday, l:loop_date]
+    else 
+      let l:weekdays[l:loop_weekday]=l:loop_day
+    endif
     let l:day_count-= 1
   endwhile
   let l:day_count=l:current_weekday_count+1
@@ -493,11 +597,17 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
     let l:potential_loop_day=a:current_day + (l:day_count - l:current_weekday_count)
     if l:potential_loop_day > l:month_length 
       let l:loop_day=l:potential_loop_day - l:month_length
+      let l:loop_date=a:current_year . "-" . (a:current_month +1) . "-" . l:loop_day 
     else 
       let l:loop_day=l:potential_loop_day
+      let l:loop_date=a:current_year . "-" . a:current_month . "-" . l:loop_day 
     endif 
     let l:loop_weekday=g:days[l:day_count]
-    let l:weekdays[l:loop_weekday]=l:loop_day
+    if g:efficient_sort
+      let l:weekdays[l:loop_weekday]=[l:loop_day, l:loop_date]
+    else
+      let l:weekdays[l:loop_weekday]=l:loop_day
+    endif
     let l:day_count+= 1
   endwhile 
   return l:weekdays
