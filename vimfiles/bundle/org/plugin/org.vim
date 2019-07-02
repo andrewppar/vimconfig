@@ -570,15 +570,9 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
   let l:month_length=g:month_length_dictionary[a:current_month]
   let l:current_date=""
   while l:day_count >= 0
-    echom "date"
-    echom l:day_count
     let l:potential_loop_day=a:current_day - (l:current_weekday_count - l:day_count)
     if l:potential_loop_day < 1 
-      echom "HERE"
       let l:loop_day=g:month_length_dictionary[TwoDigitNumberString(a:current_month -1)] - (abs(l:potential_loop_day) + 1)
-      echom l:potential_loop_day
-      echom a:current_month 
-      echom l:loop_day
       let l:loop_date=a:current_year . "-" . (a:current_month - 1) . "-" . l:loop_day
     else
       let l:loop_day=l:potential_loop_day 
