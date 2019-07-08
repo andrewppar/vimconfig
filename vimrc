@@ -55,7 +55,7 @@ nnoremap <leader>1 <C-w>T
 nnoremap <C-d> :sh<CR> 
 nnoremap [ %
 vnoremap [ %
-nnoremap gg=G :call Reindent()<cr> 
+nnoremap <leader>q :call Reindent()<cr>
 
 "Copy and paste to clipboard
 vnoremap <leader>y :w !pbcopy<CR>
@@ -72,11 +72,13 @@ function! SaveMakingDirs ()
   " Have Vim make dirs that don't exist.
   let l:path=expand('%:p:h')
   if isdirectory(l:path)
-    :write
+    execute "w <cr>"
+    let file=expand('%:p') . "bk"
+    execute "write " . l:file . "<cr>"
   else 
     let l:command="mkdir -p " . l:path
     execute "! " . l:command 
-    :write
+    execute ":w <cr>"
   endif 
 endfunction
 
@@ -151,15 +153,15 @@ function! CompileTeX()
 endfunction 
 "}}}
 " Lisp -- {{{
-"compile Lisp file 
-function! CompileLisp ()
-  execute "! clisp " . " " . '%'
+"Compile and Run Lisp file 
+function! CompileAndRunLisp ()
+  execute "! clisp -x \"(load \\\"" .'%' . "\\\")\" -repl" 
 endfunction
 augroup filetype_lisp 
   autocmd!
-  autocmd FileType lisp nnoremap <leader>b :w<CR>:call CompileLisp()<CR>
+  autocmd FileType lisp nnoremap <leader>c :w<CR>:call CompileAndRunLisp()<CR>
   autocmd FileType lisp nnoremap - o(write-line "")<esc>o
-  autocmd FileType lisp nnoremap <leader>c I;<esc>
+  autocmd FileType lisp nnoremap <leader>; I;<esc>
 augroup END
 "}}}
 " Haskell -- {{{

@@ -276,36 +276,40 @@ function! GetTodoDictionary()
     let l:current_line=getline(l:current_line_number)
     " check if it is a todo line
     let l:current_todo=TodoLineWithKeys(l:current_line, g:todo_keylist)
-    "echom "LINE" 
-    "echom l:current_line
-    "echom "CURRENT TODO" 
-    "echom l:current_todo
+    "    echom "LINE" 
+    "    echom l:current_line
+    "    echom "CURRENT TODO" 
+    "    echom l:current_todo
     "If it is and it's not 'DONE'
     if index(g:todo_keylist, l:current_todo) >= 0 && l:current_todo !=# l:last_todo 
       "echom "FOUND USEFUL LINE"
       "Check for a date. 
       let l:next_line=getline(l:current_line_number + 1)
-      "echom "NEXT LINE" 
-      "echom l:next_line
+      "     echom "NEXT LINE" 
+      "     echom l:next_line
       let l:org_date=OrgDateLineP(l:next_line)
-      "echom "DATE?"
-      "echom l:org_date
+      "     echom "DATE?"
+      "     echom l:org_date
       let l:todo_item=TodoLineTodoItem(l:current_line)
+      "echom l:todo_item
       if l:org_date > 0 
         "Experimental  -- {DATE:{TIME:[ITEM]}}
         if g:efficient_sort > 0
+          "        echom "EFFICIENCY"
           let l:todo_date=GetDateFromOrgDate(l:next_line)
           let l:todo_time=GetTimeFromOrgDate(l:next_line)
+          "       echom l:todo_date
+          "       echom l:todo_time
           if has_key(l:todo_dictionary, l:todo_date)
             let l:date_entry=l:todo_dictionary[l:todo_date]
             if has_key(l:date_entry,l:todo_time)
               let l:time_entries=l:date_entry[l:todo_time]
-              let l:time_entries=add(l:date_entry,l:current_todo)
+              let l:time_entries=add(l:time_entries,l:todo_item)
             else 
-              let l:date_entry[l:todo_time]=[l:current_todo]
+              let l:date_entry[l:todo_time]=[l:todo_item]
             endif
           else
-            let l:todo_dictionary[l:todo_date]={l:todo_time:[l:current_todo]}
+            let l:todo_dictionary[l:todo_date]={l:todo_time:[l:todo_item]}
           endif 
           "End Experimental
         else 
@@ -329,6 +333,23 @@ function! GetTodoDictionary()
     endif
     let l:current_line_number=l:current_line_number + 1
   endwhile 
+  "echom "DICTIONARY DISPLAY"
+  "if g:efficient_sort > 0
+  "  echom "LOOKING"
+  " for date in keys(l:todo_dictionary)
+  "    echom "DATE"
+  "    echom l:date
+  "    for time in keys(l:todo_dictionary[l:date])
+  "      echom "TIME" 
+  "      echom l:time
+  "      for item in l:todo_dictionary[l:date][l:time]
+  "        echom "ITEM"
+  "        echom l:item
+  "      endfor
+  "    endfor
+  "  endfor
+  "endif
+
   return l:todo_dictionary
 endfunction
 
@@ -392,6 +413,7 @@ endfunction
 let g:agenda_vertical_p=1
 
 function! OrgAgenda() 
+  let g:efficient_sort=0
   let l:todo_items=GetTodoDictionary()
   let l:timeless_todos=[]
   let l:timed_todos={} 
@@ -464,26 +486,50 @@ function! OrgAgendaAlt()
   let l:current_day=strftime("%d")
   let l:current_year=strftime("%Y")
   let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year) 
-    for day in g:days
+  for day in g:days
     "if day matches todo then print todo
     "Do something special for today, i.e. expand it and add now
-    let l:current_date_and_datestamp=l:weekday_dict[l:day]
+    "echom "DAY"
+    "echom l:day
+    let l:current_date_and_datestamp=l:weekday_dict[l:day] 
+    "for item in l:current_date_and_datestamp
+    "  echom l:item
+    "endfor 
     let l:current_date=l:current_date_and_datestamp[0]
+    "echom l:current_date
     let l:current_year_month_day_date=l:current_date_and_datestamp[1]
+    "echom "HERE"
+    "echom l:current_year_month_day_date
     execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
     let l:today_p=l:current_date ==# l:current_day 
     if has_key(l:todo_item_dictionary, l:current_year_month_day_date)
+     " echom "IN IF"
       let l:day_dictionary=l:todo_item_dictionary[l:current_year_month_day_date] 
-      call printOrgTodoItemsForDayAlt(l:day_dictionary, l:current_day) 
+     "" echom "FOR" 
+     " for time in keys(l:day_dictionary)
+     "  " echom "TIME"
+     "   "echom l:time
+     "   for item in l:day_dictionary[l:time]
+     "    " echom "ITEM"
+     "     "echom l:item
+     "   endfor
+     "   echom "TIMEDONE"
+     " endfor
+      call PrintOrgTodoItemsForDayAlt(l:day_dictionary, l:current_day) 
     endif 
   endfor
 endfunction
 
-function! PrintOrgTodoItemsForDayAlt(todo_day_dictionary, day)
-  let l:sorted_keys=sort(keys(l:todo_day_dictionary), "OrgTimeGreaterThan")
+function! PrintOrgTodoItemsForDayAlt(todo_day_dictionary, day) 
+"  echom "PRINT"
+  let l:sorted_keys=sort(keys(a:todo_day_dictionary), "OrgTimeGreaterThan")
   for time in l:sorted_keys
-    let l:todo_item=l:todo_day_dictionary[l:time]
-    call PrintTodoItem(l:todo_item, l:time)
+ "   echom l:time
+    let l:todo_items=a:todo_day_dictionary[l:time]
+    for todo in l:todo_items 
+  "    echom l:todo
+      call PrintTodoItem(l:todo, l:time)
+    endfor
   endfor
 endfunction
 
@@ -570,23 +616,17 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
   let l:month_length=g:month_length_dictionary[a:current_month]
   let l:current_date=""
   while l:day_count >= 0
-    echom "date"
-    echom l:day_count
     let l:potential_loop_day=a:current_day - (l:current_weekday_count - l:day_count)
     if l:potential_loop_day < 1 
-      echom "HERE"
       let l:loop_day=g:month_length_dictionary[TwoDigitNumberString(a:current_month -1)] - (abs(l:potential_loop_day) + 1)
-      echom l:potential_loop_day
-      echom a:current_month 
-      echom l:loop_day
       let l:loop_date=a:current_year . "-" . (a:current_month - 1) . "-" . l:loop_day
     else
       let l:loop_day=l:potential_loop_day 
-      let l:loop_date=a:current_year . "-" . a:current_month . "-" . l:loop_day
+      let l:loop_date=a:current_year . "-" . a:current_month . "-" . TwoDigitNumberString(l:loop_day)
     endif 
     let l:loop_weekday=g:days[l:day_count]
     if g:efficient_sort
-      let l:weekdays[l:loop_weekday]=[l:loop_weekday, l:loop_date]
+      let l:weekdays[l:loop_weekday]=[l:loop_day, l:loop_date]
     else 
       let l:weekdays[l:loop_weekday]=l:loop_day
     endif
@@ -597,10 +637,10 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
     let l:potential_loop_day=a:current_day + (l:day_count - l:current_weekday_count)
     if l:potential_loop_day > l:month_length 
       let l:loop_day=l:potential_loop_day - l:month_length
-      let l:loop_date=a:current_year . "-" . (a:current_month +1) . "-" . l:loop_day 
+      let l:loop_date=a:current_year . "-" . (a:current_month +1) . "-" . TwoDigitNumberString(l:loop_day)
     else 
       let l:loop_day=l:potential_loop_day
-      let l:loop_date=a:current_year . "-" . a:current_month . "-" . l:loop_day 
+      let l:loop_date=a:current_year . "-" . a:current_month . "-" . TwoDigitNumberString(l:loop_day)
     endif 
     let l:loop_weekday=g:days[l:day_count]
     if g:efficient_sort
