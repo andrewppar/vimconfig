@@ -157,16 +157,24 @@ function! CycleNextTodoKey(current_todo_key)
   " If the new keyword is the last one, close the item.
   "@todo make 'CLOSED" be indented the right amount
   if l:next_key ==# g:todo_keylist[-1]
-    execute ':normal! o CLOSED: '
-    call InsertCurrentDateInformation()
-    "This is kk because our general toggling function requires it, calling
-    "this from CycleTodoKeysInternal does not require it. I have no idea why
-    "It might be night to put the extra k on the outside of this function, but
-    " I'm not sure how to do that. Maybe this function just has to be 
-    " private. 
-    execute ':normal! kk' 
-    "If the old keyword was the last remove any 
-    "old CLOSEDs
+    let l:next_line_number=(line('.') + 1)
+    let l:next_line=getline(l:next_line_number)
+    if OrgDateLineP(l:next_line)
+      execute ":normal! j0d$I CLOSED: "
+      call InsertCurrentDateInformation()
+      execute ":normal! kk"
+    else 
+      execute ":normal! o CLOSED: "
+      call InsertCurrentDateInformation()
+      "This is kk because our general toggling function requires it, calling
+      "this from CycleTodoKeysInternal does not require it. I have no idea why
+      "It might be night to put the extra k on the outside of this function, but
+      " I'm not sure how to do that. Maybe this function just has to be 
+      " private. 
+      execute ':normal! kk' 
+      "If the old keyword was the last remove any 
+      "old CLOSEDs
+    endif
   elseif a:current_todo_key ==# g:todo_keylist[-1]
     let l:next_line=getline(line('.')+1)
     if l:next_line =~# '^\s*CLOSED:'
@@ -328,15 +336,15 @@ function! OrgDateLineP(line)
   if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+\d*\S>') !=? "" 
     return 1 
   endif
-" These are not yet necessary
-"  if matchstr(a:line, '\v\w+:\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\>') !=? ""
-"    echom "HERE!!!"
-"    return 1
-"  endif 
-"  if matchstr(a:line, '\v\w+:\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+d*\S>') !=? ""
-"    echom "THERE!!!!"
-"    return 1
-"  endif 
+  " These are not yet necessary
+  "  if matchstr(a:line, '\v\w+:\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\>') !=? ""
+  "    echom "HERE!!!"
+  "    return 1
+  "  endif 
+  "  if matchstr(a:line, '\v\w+:\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+d*\S>') !=? ""
+  "    echom "THERE!!!!"
+  "    return 1
+  "  endif 
   return 0 
 endfunction 
 
