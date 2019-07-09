@@ -258,7 +258,7 @@ endfunction
 
 let g:efficient_sort=0
 
-function! GetTodoDictionary() 
+function! GetTodoDictionary()
   "@todo expand to look at a group of files
   "This function looks at the current file 
   "and generates a dictionary of all the non-finished todo items 
@@ -276,80 +276,38 @@ function! GetTodoDictionary()
     let l:current_line=getline(l:current_line_number)
     " check if it is a todo line
     let l:current_todo=TodoLineWithKeys(l:current_line, g:todo_keylist)
-    "    echom "LINE" 
-    "    echom l:current_line
-    "    echom "CURRENT TODO" 
-    "    echom l:current_todo
     "If it is and it's not 'DONE'
     if index(g:todo_keylist, l:current_todo) >= 0 && l:current_todo !=# l:last_todo 
-      "echom "FOUND USEFUL LINE"
       "Check for a date. 
       let l:next_line=getline(l:current_line_number + 1)
-      "     echom "NEXT LINE" 
-      "     echom l:next_line
       let l:org_date=OrgDateLineP(l:next_line)
-      "     echom "DATE?"
-      "     echom l:org_date
       let l:todo_item=TodoLineTodoItem(l:current_line)
-      "echom l:todo_item
       if l:org_date > 0 
-        "Experimental  -- {DATE:{TIME:[ITEM]}}
-        if g:efficient_sort > 0
-          "        echom "EFFICIENCY"
-          let l:todo_date=GetDateFromOrgDate(l:next_line)
-          let l:todo_time=GetTimeFromOrgDate(l:next_line)
-          "       echom l:todo_date
-          "       echom l:todo_time
-          if has_key(l:todo_dictionary, l:todo_date)
-            let l:date_entry=l:todo_dictionary[l:todo_date]
-            if has_key(l:date_entry,l:todo_time)
-              let l:time_entries=l:date_entry[l:todo_time]
-              let l:time_entries=add(l:time_entries,l:todo_item)
-            else 
-              let l:date_entry[l:todo_time]=[l:todo_item]
-            endif
-          else
-            let l:todo_dictionary[l:todo_date]={l:todo_time:[l:todo_item]}
-          endif 
-          "End Experimental
-        else 
-          let l:todo_dictionary[l:todo_item]=l:next_line 
+        let l:todo_date=GetDateFromOrgDate(l:next_line)
+        let l:todo_time=GetTimeFromOrgDate(l:next_line)
+        if has_key(l:todo_dictionary, l:todo_date)
+          let l:date_entry=l:todo_dictionary[l:todo_date]
+          if has_key(l:date_entry,l:todo_time)
+            let l:time_entries=l:date_entry[l:todo_time]
+            let l:time_entries=add(l:time_entries,l:todo_item)
+          else 
+            let l:date_entry[l:todo_time]=[l:todo_item]
+          endif
+        else
+          let l:todo_dictionary[l:todo_date]={l:todo_time:[l:todo_item]}
         endif 
       else 
-        "Experimental -- {DATE:{TIME:[ITEM]}}
-        if g:efficient_sort > 0
-          if has_key(l:todo_dictionary,"0000-00-00")
-            let l:dateless_todos=l:todo_dictionary["0000-00-00"]
-            let l:timeless_todos=l:dateless_todos["00:00"]
-            let l:timeless_todos=add(l:timeless_todos,l:todo_item) 
-          else 
-            let l:todo_dictionary["0000-00-00"]={"00:00":[l:todo_item]}
-          endif 
-          "end Experimental
-        else
-          let l:todo_dictionary[l:todo_item]="" 
+        if has_key(l:todo_dictionary,"0000-00-00")
+          let l:dateless_todos=l:todo_dictionary["0000-00-00"]
+          let l:timeless_todos=l:dateless_todos["00:00"]
+          let l:timeless_todos=add(l:timeless_todos,l:todo_item) 
+        else 
+          let l:todo_dictionary["0000-00-00"]={"00:00":[l:todo_item]}
         endif 
       endif
     endif
     let l:current_line_number=l:current_line_number + 1
   endwhile 
-  "echom "DICTIONARY DISPLAY"
-  "if g:efficient_sort > 0
-  "  echom "LOOKING"
-  " for date in keys(l:todo_dictionary)
-  "    echom "DATE"
-  "    echom l:date
-  "    for time in keys(l:todo_dictionary[l:date])
-  "      echom "TIME" 
-  "      echom l:time
-  "      for item in l:todo_dictionary[l:date][l:time]
-  "        echom "ITEM"
-  "        echom l:item
-  "      endfor
-  "    endfor
-  "  endfor
-  "endif
-
   return l:todo_dictionary
 endfunction
 
@@ -367,9 +325,18 @@ function! OrgDateLineP(line)
   if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\>') !=? ""
     return 1
   endif
-  if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+\d*\S>') !=? ""
-    return 1
+  if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+\d*\S>') !=? "" 
+    return 1 
   endif
+" These are not yet necessary
+"  if matchstr(a:line, '\v\w+:\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\>') !=? ""
+"    echom "HERE!!!"
+"    return 1
+"  endif 
+"  if matchstr(a:line, '\v\w+:\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+d*\S>') !=? ""
+"    echom "THERE!!!!"
+"    return 1
+"  endif 
   return 0 
 endfunction 
 
@@ -405,61 +372,11 @@ function! OutlineNewline ()
 endfunction
 "  }}}
 " -- Org Agenda --- {{{
-"  @todo currently we pull the items off the agend and then sort them for each
-"  day, we could really do this all at once with a single agenda. This has
-"  caused noticable lag when loading bigger todo files. It has not yet caused
-"  seriously objectionable lag but it probably will. 
 
 let g:agenda_vertical_p=1
 
-function! OrgAgenda() 
-  let g:efficient_sort=0
-  let l:todo_items=GetTodoDictionary()
-  let l:timeless_todos=[]
-  let l:timed_todos={} 
-  for todo_item in keys(l:todo_items)
-    let l:todo_time=l:todo_items[l:todo_item]
-    if l:todo_time ==? ""
-      let l:timeless_todos=add(l:timeless_todos,l:todo_item)
-    else
-      let l:timed_todos[l:todo_item]=l:todo_time
-    endif 
-  endfor
-  "vertical or horizontal split
-  if g:agenda_vertical_p
-    execute ":vsp *agenda*"
-  else
-    execute ":sp *agenda*"
-  endif 
-  "set up the buffer
-  setlocal modifiable
-  setlocal buftype=nofile
-  set ft=org-agenda
-  "ensure there isn't anying already in the buffer
-  execute ":normal! gg0vG$dd"
-  "Set up the page
-  execute ":normal! iOrg Agenda"
-  execute ":normal! o------------------------------------------------"
-  call PrintTimelessTodoItems(l:timeless_todos)
-  execute ":normal! o"
-  let l:current_month_name=strftime("%b")
-  execute ":normal! o" . l:current_month_name
-  let l:current_month=strftime("%m")
-  let l:current_day=strftime("%d")
-  let l:current_year=strftime("%Y")
-  let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year) 
-  for day in g:days
-    "if day matches todo then print todo
-    "Do something special for today, i.e. expand it and add now
-    let l:current_date=l:weekday_dict[l:day]
-    execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
-    let l:today_p=l:current_date ==# l:current_day 
-    call PrintOrgTodoItemsForDay(l:timed_todos, l:current_date, l:current_month, l:current_year, l:today_p)
-  endfor 
-  setlocal nomodifiable
-endfunction
-
-function! OrgAgendaAlt()
+function! OrgAgenda()
+  "@public
   let g:efficient_sort=1 
   let l:todo_item_dictionary=GetTodoDictionary()
   let timeless_todos=l:todo_item_dictionary["0000-00-00"]
@@ -503,31 +420,31 @@ function! OrgAgendaAlt()
     execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
     let l:today_p=l:current_date ==# l:current_day 
     if has_key(l:todo_item_dictionary, l:current_year_month_day_date)
-     " echom "IN IF"
+      " echom "IN IF"
       let l:day_dictionary=l:todo_item_dictionary[l:current_year_month_day_date] 
-     "" echom "FOR" 
-     " for time in keys(l:day_dictionary)
-     "  " echom "TIME"
-     "   "echom l:time
-     "   for item in l:day_dictionary[l:time]
-     "    " echom "ITEM"
-     "     "echom l:item
-     "   endfor
-     "   echom "TIMEDONE"
-     " endfor
-      call PrintOrgTodoItemsForDayAlt(l:day_dictionary, l:current_day) 
+      "" echom "FOR" 
+      " for time in keys(l:day_dictionary)
+      "  " echom "TIME"
+      "   "echom l:time
+      "   for item in l:day_dictionary[l:time]
+      "    " echom "ITEM"
+      "     "echom l:item
+      "   endfor
+      "   echom "TIMEDONE"
+      " endfor
+      call PrintOrgTodoItemsForDay(l:day_dictionary, l:current_day) 
     endif 
   endfor
 endfunction
 
-function! PrintOrgTodoItemsForDayAlt(todo_day_dictionary, day) 
-"  echom "PRINT"
+function! PrintOrgTodoItemsForDay(todo_day_dictionary, day) 
+  "  echom "PRINT"
   let l:sorted_keys=sort(keys(a:todo_day_dictionary), "OrgTimeGreaterThan")
   for time in l:sorted_keys
- "   echom l:time
+    "   echom l:time
     let l:todo_items=a:todo_day_dictionary[l:time]
     for todo in l:todo_items 
-  "    echom l:todo
+      "    echom l:todo
       call PrintTodoItem(l:todo, l:time)
     endfor
   endfor
@@ -543,39 +460,6 @@ function! PrintTimelessTodoItems(items)
     call PrintTodoItem(l:item, "     ")
   endfor 
 endfunction 
-
-function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year, today_p)
-  "echom "PRINT ORG TODO ITEMS" 
-  let l:todo_items_for_day={}
-  if a:today_p
-    "@todo turn this into it's own function
-    let l:current_day_hour=9
-    while l:current_day_hour<19
-      let l:hourstring=TwoDigitNumberString(l:current_day_hour)
-      let l:timestamp_for_hour_today=l:hourstring . ":00"
-      let l:todo_items_for_day[l:timestamp_for_hour_today]=""
-      let l:current_day_hour=l:current_day_hour+1
-    endwhile 
-    "echom "GENERATED TODAY"
-    "echom a:today_p 
-  endif
-  for todo_item in keys(a:todo_dictionary) 
-    "echom l:todo_item
-    let l:timestamp=a:todo_dictionary[l:todo_item]
-    let l:scheduled_date=GetDateFromOrgDate(l:timestamp)
-    if a:year . "-" . a:month . "-" . TwoDigitNumberString(a:day) ==# l:scheduled_date 
-      let l:scheduled_time=GetTimeFromOrgDate(l:timestamp) 
-      " @todo figure out what to do if there are multiple items at the same
-      " time 
-      let l:todo_items_for_day[l:scheduled_time]=l:todo_item
-    endif  
-  endfor
-  let l:sorted_keys=sort(keys(l:todo_items_for_day),"OrgTimeGreaterThan") 
-  for time in l:sorted_keys
-    let l:todo_item=l:todo_items_for_day[l:time]
-    call PrintTodoItem(l:todo_item, l:time)
-  endfor
-endfunction
 
 function! OrgTimeGreaterThan (time_1, time_2)
   let l:hours_1=strpart(a:time_1,0,2)
@@ -679,5 +563,76 @@ endfunction
 
 function! CheckBoxLineUncheckBox()
   execute ":s/\\[X\\]/[ ]/"
+endfunction
+"  }}}
+" --- Archive Finished Todos --- {{{ 
+function! OrgArchiveTodos ()
+  "@public
+  let l:archive_dictionary=GetFinishedTodosErasingFromOriginal()
+  let l:archive_buffer=expand('%') . "_archive" 
+  execute ":tabedit " . l:archive_buffer
+  execute ":normal G$" 
+  call WriteArchivedTodos(l:archive_dictionary) 
+endfunction
+
+function! WriteArchivedTodos(dictionary)
+  for timestamp in keys(a:dictionary)
+    for todo in a:dictionary[l:timestamp]
+      execute ":normal o" . l:todo
+      execute ":normal o" . l:timestamp
+      execute ":normal o ARCHIVED: " 
+      call InsertCurrentDateInformation()
+      execute ":normal o"
+    endfor
+  endfor
+  execute ":wq"
+endfunction
+"@note It would be nice to have a general purpose todo scraper. If we write another
+" one then we should probably abstract out the internals.
+
+function! GetFinishedTodosErasingFromOriginal ()
+  "This function looks at the current file and deletes all the finished todo
+  "items, placing them in an archive file.
+  let l:finished_task_dictionary = {}
+  let l:last_line_number=line('$')
+  let l:current_line_number=0
+  let l:lines_to_delete=[]
+  while l:current_line_number <= l:last_line_number
+    let l:current_line=getline(l:current_line_number)
+    let l:current_line_todo_tag=TodoLineWithKeys(l:current_line, g:todo_keylist)
+    if index(g:todo_keylist, l:current_line_todo_tag) ==# g:last_todo_idx
+      let l:next_line=getline(l:current_line_number +1)
+      let l:todo_item=TodoLineTodoItem(l:current_line)
+      let l:org_date=OrgDateLineP(l:next_line)
+      let l:lines_to_delete=add(l:lines_to_delete,l:current_line_number)
+      if l:org_date > 0 
+        call UpdateDictionaryWithKey(l:finished_task_dictionary, l:next_line, l:todo_item) 
+        let l:lines_to_delete=add(l:lines_to_delete,(l:current_line_number + 1)) 
+      else 
+        call UpdateDictionaryWithKey(l:finished_task_dictionary, "0000-00-00", l:todo_item)
+      endif
+    endif
+    let l:current_line_number = l:current_line_number + 1 
+  endwhile 
+  "Clean up archived lines
+  for line_number in reverse(l:lines_to_delete)
+    execute ":" . l:line_number . "d"
+  endfor 
+  return l:finished_task_dictionary
+endfunction
+
+
+" }}}
+" --- General Utilities --- {{{ 
+function! UpdateDictionaryWithKey (dictionary, key, value)
+  "@note This function assumes that dictionary values
+  "are lists
+  if has_key(a:dictionary,a:key)
+    let l:entry=a:dictionary[a:key]
+    let l:entry=add(l:entry,a:value)
+  else
+    let a:dictionary[a:key]=[a:value]
+  endif 
+  return a:dictionary
 endfunction
 "  }}}

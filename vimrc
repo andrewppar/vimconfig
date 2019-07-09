@@ -47,8 +47,6 @@ hi SpellBad cterm=underline
 " Custom general key mappings --- {{{
 let mapleader = ","
 inoremap jk <Esc>`^
-onoremap jk <Esc>
-cnoremap jk <C-c><Esc>
 nnoremap <leader>s :call SaveMakingDirs()<cr>
 nnoremap <leader>o <C-w><C-w>
 nnoremap <leader>1 <C-w>T
