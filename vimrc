@@ -97,8 +97,10 @@ augroup filetype_org
   autocmd BufEnter *.org set nospell
   "@todo make these changes local 
   autocmd FileType org nnoremap <leader>t :call ToggleLines()<CR> 
-  autocmd FileType org inoremap <C-L> <esc>`^:call OutlineNewline()<CR>A 
+  autocmd FileType org inoremap <C-J> <esc>`^:call OutlineNewline()<CR>A 
   autocmd FileType org nnoremap <leader>s o<esc>`^:call InsertCurrentDateInformation()<CR>
+  autocmd FileType org nnoremap <leader>a :call OrgAgenda()<CR>
+  autocmd FileType org nnoremap <leader>d :call OrgArchiveTodos()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
 augroup END
 
