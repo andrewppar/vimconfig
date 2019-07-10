@@ -47,7 +47,6 @@ hi SpellBad cterm=underline
 " Custom general key mappings --- {{{
 let mapleader = ","
 inoremap jk <Esc>`^
-nnoremap <leader>s :call SaveMakingDirs()<cr>
 nnoremap <leader>o <C-w><C-w>
 nnoremap <leader>1 <C-w>T
 nnoremap <C-d> :sh<CR> 
@@ -94,13 +93,12 @@ let &t_EI = "\e[2 q"
 " }}}
 " Org Mode --- {{{
 augroup filetype_org
-  autocmd! 
-
+  autocmd!  
   autocmd BufEnter *.org set nospell
+  "@todo make these changes local 
   autocmd FileType org nnoremap <leader>t :call ToggleLines()<CR> 
-  autocmd FileType org inoremap ,d <C-o>:call OutlineNewline()<CR>
-  "@todo unify this ^ with CycleTodoKeys
-  " autocmd FileType org nnoremap <C-M> :call OutlineNewline()<CR>
+  autocmd FileType org inoremap <C-L> <esc>`^:call OutlineNewline()<CR>A 
+  autocmd FileType org nnoremap <leader>s o<esc>`^:call InsertCurrentDateInformation()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
 augroup END
 
