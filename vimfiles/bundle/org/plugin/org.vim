@@ -896,6 +896,18 @@ endfunction
 
 
 " }}}
+" --- Insert Code into Buffer --- {{{ 
+function! ExecuteBash()
+  let l:line_number=line('.')
+  let l:column_number=virtcol('.')
+  let l:current_line=getline(l:line_number)
+  execute ":normal o" 
+  execute ":normal o"
+  execute ":read ! " . l:current_line
+  execute ":normal " . l:line_number . "G" . l:column_number . "|"
+endfunction
+
+"  }}}
 " --- General Utilities --- {{{ 
 function! UpdateDictionaryWithKey (dictionary, key, value)
   "@note This function assumes that dictionary values

@@ -47,11 +47,7 @@ hi SpellBad cterm=underline
 " Custom general key mappings --- {{{
 let mapleader = ","
 inoremap jk <Esc>`^
-<<<<<<< HEAD
-onoremap jk <Esc>
 nnoremap <leader>s :call SaveMakingDirs()<cr>
-=======
->>>>>>> 0851f499a21d8beaf155e966ac635c01d0ab0648
 nnoremap <leader>o <C-w><C-w>
 nnoremap <leader>1 <C-w>T
 nnoremap <C-d> :sh<CR> 
@@ -102,17 +98,13 @@ augroup filetype_org
   autocmd BufEnter *.org set nospell
   "@todo make these changes local 
   autocmd FileType org nnoremap <leader>t :call ToggleLines()<CR> 
-<<<<<<< HEAD
-  "@todo unify this ^ with CycleTodoKeys
-  " autocmd FileType org nnoremap <C-M> :call OutlineNewline()<CR>
-=======
   autocmd FileType org nnoremap <C-N> :call OrgLineIncreaseTimeStamp()<CR>
   autocmd FileType org nnoremap <C-P> :call OrgLineDecreaseTimeStamp()<CR>
   autocmd FileType org inoremap <C-J> <esc>`^:call OutlineNewline()<CR>A 
   autocmd FileType org nnoremap <leader>s o<esc>`^:call InsertCurrentDateInformation()<CR>
   autocmd FileType org nnoremap <leader>a :call OrgAgenda()<CR>
   autocmd FileType org nnoremap <leader>d :call OrgArchiveTodos()<CR>
->>>>>>> 0851f499a21d8beaf155e966ac635c01d0ab0648
+  autocmd FileType org nnoremap <leader>c :call ExecuteBash()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
 augroup END
 
