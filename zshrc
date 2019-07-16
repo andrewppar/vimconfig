@@ -120,3 +120,4 @@ function my_time () {
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 alias todo="vim ~/org/status.org"
+alias v="vim"
