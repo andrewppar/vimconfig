@@ -48,7 +48,6 @@ hi SpellBad cterm=underline
 let mapleader = ","
 inoremap jk <Esc>`^
 onoremap jk <Esc>
-cnoremap jk <C-c><Esc>
 nnoremap <leader>s :call SaveMakingDirs()<cr>
 nnoremap <leader>o <C-w><C-w>
 nnoremap <leader>1 <C-w>T
@@ -98,7 +97,6 @@ augroup filetype_org
 
   autocmd BufEnter *.org set nospell
   autocmd FileType org nnoremap <leader>t :call ToggleLines()<CR> 
-  autocmd FileType org inoremap ,d <C-o>:call OutlineNewline()<CR>
   "@todo unify this ^ with CycleTodoKeys
   " autocmd FileType org nnoremap <C-M> :call OutlineNewline()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
