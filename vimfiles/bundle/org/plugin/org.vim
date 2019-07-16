@@ -20,6 +20,38 @@ endfunction
 " -- Manage Dates --{{{
 let g:days=["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
+function! OrgGetAdjacentWeekday(weekday,direction)
+  if a:direction ==# '+'
+    return OrgGetNextWeekday(a:weekday)
+  elseif a:direction ==# '-'
+    return OrgGetPreviousWeekday(a:weekday)
+  else 
+    return "OrgGetAdjacentWeekday ERROR"
+  endif
+endfunction
+
+function! OrgGetPreviousWeekday (weekday)
+  let l:week_index=index(g:days, a:weekday)
+  let l:last_index=len(g:days)
+  if l:week_index ==# 0
+    return g:days[l:last_index - 1]
+  else 
+    return g:days[l:week_index - 1]
+  endif 
+endfunction
+
+
+function! OrgGetNextWeekday(weekday)
+  let l:week_index=index(g:days,a:weekday)
+  let l:last_index=len(g:days)
+  if l:week_index >= l:last_index - 1
+    return g:days[0]
+  else 
+    return g:days[l:week_index + 1]
+  endif 
+endfunction
+
+
 function! GetDayFromBuffer () 
   let l:line=getline('.')
   let l:possibly_split_lines=split(l:line, '<')
@@ -110,17 +142,250 @@ function! GetItemFromOrgDate(org_date,start,end)
   return strpart(l:clean_string,a:start,a:end)
 endfunction
 
-function! IngestOrgDate(org_date_string, org_date_dictionary)
-  let l:year_month_day=split(a:org_date_string, "-")
-  let l:org_date_dictionary['y']=l:year_month_day[0]
-  let l:org_date_dictionary['m']=l:year_month_day[1]
-  let l:org_date_dictionary['d']=l:year_month_day[2]
-  return l:org_date_dictionary
+"Dates are represented internally as a dictionary whose keys are 
+"'D' for date, 'W' for day, and 'T' for timestamp
+" The value of 'D' is a dictionary whose keys are 'y','m', and 'd' for  
+" year, month, and date.
+" The value of 'T' is a dictionary whose keys are 
+" 'h' and 'm' for hours and minutes.
+" @todo if these sparse keys cause a single bug use 
+" something robust fool 
+function! OrgLineIncreaseTimeStamp ()
+  "@public 
+  return OrgLineChangeTimeStamp('+')
 endfunction
 
-"function! IngestOrgDay(org_date_string, org_date_dictionary)
-"
-"endfunction
+function! OrgLineDecreaseTimeStamp ()
+  "@public
+  return OrgLineChangeTimeStamp('-')
+endfunction
+
+function! OrgLineChangeTimeStamp(direction)
+  "@private 
+  "@input direction one of '+' or '-'
+  "@todo make this preserve what's around the timestamp
+  let l:line=getline('.') 
+  let l:cursor_column=virtcol('.')
+  if OrgDateLineP(l:line)
+    let l:cursor_key=CursorKeyForTimeStamp(l:line,l:cursor_column)
+    "    echom "KEY" 
+    "    echom l:cursor_key
+    let l:dict=IngestOrgTimeStamp(l:line,l:cursor_key)
+    "    echom "DATE"
+    let l:date=l:dict['D']
+    "    echom "Year " . l:date['y']
+    "    echom "Month " . l:date['m']
+    "    echom "Day " . l:date['d']
+    "    echom "WeekDay " . l:dict['W']
+    "    echom "Time " 
+    let l:time=l:dict['T']
+    "    echom "hour " . l:time['h']
+    "    echom "minute " . l:time['m']
+    let l:dict=ChangeOrgTimeStamp(l:dict,l:cursor_key,a:direction)
+    echom "DATE"
+    let l:date=l:dict['D']
+    "    echom "Year " . l:date['y']
+    "    echom "Month " . l:date['m']
+    "    echom "Day " . l:date['d']
+    "    echom "WeekDay " . l:dict['W']
+    "    echom "Time " 
+    let l:time=l:dict['T']
+    "    echom "hour " . l:time['h']
+    "    echom "minute " . l:time['m']
+    execute ":norm 0d$"
+    let l:timestamp_string=WriteTimeStampDictionaryToString(l:dict)
+    execute ":norm i   " . l:timestamp_string 
+    execute ":norm " . l:cursor_column . "|"
+  else
+    return -1
+  endif
+endfunction
+
+function! WriteTimeStampDictionaryToString(time_stamp_dictionary)
+  let l:date=a:time_stamp_dictionary['D']
+  let l:year=l:date['y']
+  let l:month=l:date['m']
+  let l:day=l:date['d']
+  let l:weekday=a:time_stamp_dictionary['W']
+  let l:time=a:time_stamp_dictionary['T']
+  let l:hours=l:time['h']
+  let l:minutes=l:time['m']
+  let l:timestampstring="<" . l:year . "-" . l:month . "-" . l:day . " " . l:weekday . " " . l:hours . ":" . l:minutes . ">"
+  return l:timestampstring
+endfunction
+
+function! CursorKeyForTimeStamp (line, cursor_column)
+  "@note: Assumes that the cursor is on a:line and 
+  "that that line is a OrgDateLineP
+  let l:time_stamp_start=stridx(a:line,'<')
+  if a:cursor_column <= l:time_stamp_start + 5
+    return 'y'
+  elseif a:cursor_column <= l:time_stamp_start + 8 
+    return 'm'
+  elseif a:cursor_column <= l:time_stamp_start + 11
+    return 'd'
+  elseif a:cursor_column <= l:time_stamp_start + 15
+    return 'W' 
+  elseif a:cursor_column <= l:time_stamp_start + 18 
+    return 'h'
+  else 
+    return 'mi'
+  endif
+endfunction
+
+
+function!IngestOrgTimeStamp(line, cursor_key)
+  "@note: assumes that the a:line is a OrgDateLineP
+  let l:date_strings=matchlist(a:line, '\v\<(\d\d\d\d-\d\d-\d\d) (\S\S\S) (\d\d:\d\d).*')
+  let l:date=IngestOrgDate(l:date_strings[1], {}) 
+  let l:day=l:date_strings[2] 
+  let l:time=IngestOrgTime(l:date_strings[3], {})
+  let l:result={'D':l:date, 'W':l:day, 'T':l:time} 
+  return l:result
+endfunction
+
+function! IngestOrgDate(org_date_string, org_date_dictionary)
+  "@note: assumes that a:org_date_string is of the form \d\d\d\d-\d\d-\d\d
+  let l:year_month_day=split(a:org_date_string, "-")
+  let a:org_date_dictionary['y']=l:year_month_day[0]
+  let a:org_date_dictionary['m']=l:year_month_day[1]
+  let a:org_date_dictionary['d']=l:year_month_day[2]
+  return a:org_date_dictionary
+endfunction
+
+function! IngestOrgTime(org_time_string, org_time_dictionary)
+  "@note: assumes that a:org_time_string is of the form \d\d:\d\d
+  let l:hour_minute=split(a:org_time_string, ":")
+  let a:org_time_dictionary['h']=l:hour_minute[0]
+  let a:org_time_dictionary['m']=l:hour_minute[1]
+  return a:org_time_dictionary
+endfunction
+
+function! OrgTimeToggleMinutesHours (org_time_key)
+  if a:org_time_key ==# 'm'
+    return 'h'
+  elseif a:org_time_key ==# 'h'
+    return 'm'
+  else 
+    return "ERROR"
+  endif
+endfunction
+
+function! ChangeOrgTimeStamp (org_time_dictionary, slot_to_change, direction)
+  if a:slot_to_change ==# 'y'
+    return ChangeOrgTimeStampYear(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'm'
+    return ChangeOrgTimeStampMonth(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'd'
+    return ChangeOrgTimeStampDay(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'W'
+    return ChangeOrgTimeStampWeekday(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'h'
+    return ChangeOrgTimeStampHours(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'mi'
+    return ChangeOrgTimeStampMinutes(a:org_time_dictionary,a:direction)
+  else 
+    return -1
+  endif 
+endfunction
+
+function! ChangeOrgTimeStampMonth (org_time_dictionary,direction)
+  return ChangeOrgTimeStampDateInternal (a:org_time_dictionary, 'm', a:direction)
+endfunction
+
+function! ChangeOrgTimeStampYear (org_time_dictionary, direction)
+  return ChangeOrgTimeStampDateInternal(a:org_time_dictionary, 'y', a:direction)
+endfunction
+
+"@TODO Add cycles to all the adding of months and days. When we hit the end of
+"a month by days, or day, year by months, or day by hours, everything should
+"roll over. 
+
+function! ChangeOrgTimeStampDateInternal (org_time_dictionary, slot_to_change, direction)
+  let l:datestamp=a:org_time_dictionary['D'] 
+  let l:year=l:datestamp['y']
+  let l:month=l:datestamp['m']
+  if a:slot_to_change ==# 'y'
+    if a:direction ==# '+' 
+      let l:updated_year=l:year + 1
+    elseif a:direction ==# '-'
+      let l:updated_year=l:year - 1  
+    else
+      let l:updated_year = l:year
+    endif 
+    let l:updated_month=l:month 
+  else 
+    let l:updated_year=l:year
+    if a:direction ==# '+' 
+      let l:updated_month=l:month + 1
+    elseif a:direction ==# '-'
+      let l:updated_month=l:month - 1
+    else
+      let l:updated_month=l:month
+    endif
+  endif 
+  let l:day=l:datestamp['d']
+  let l:new_weekday=GetDayFromYearMonthDay(l:updated_year, l:updated_month, l:day)
+  let l:new_datestamp={'y':l:updated_year, 'm':(TwoDigitNumberString(l:updated_month)), 'd':l:day}
+  let a:org_time_dictionary['D']=l:new_datestamp
+  let a:org_time_dictionary['W']=l:new_weekday
+  return a:org_time_dictionary
+endfunction 
+
+function! ChangeOrgTimeStampWeekday (org_time_dictionary, direction)
+  return ChangeOrgTimeStampDayInternal(a:org_time_dictionary, a:direction)
+endfunction
+
+function! ChangeOrgTimeStampDay (org_time_dictionary, direction)
+  return ChangeOrgTimeStampDayInternal(a:org_time_dictionary, a:direction)
+endfunction
+
+function! ChangeOrgTimeStampDayInternal(org_time_dictionary, direction)
+  let l:weekday=a:org_time_dictionary['W']
+  let l:datestamp=a:org_time_dictionary['D']
+  let l:year=l:datestamp['y']
+  let l:month=l:datestamp['m']
+  let l:day=l:datestamp['d']
+  if a:direction ==# '+'
+    let l:updated_day=TwoDigitNumberString(l:day + 1)
+  elseif a:direction ==# '-'
+    let l:updated_day=TwoDigitNumberString(l:day - 1)
+  else
+    let l:updated_day=l:day
+  endif
+  let l:new_datestamp={'y': l:year, 'm': l:month, 'd':l:updated_day}
+  let a:org_time_dictionary['D']=l:new_datestamp
+  let a:org_time_dictionary['W']=OrgGetAdjacentWeekday(l:weekday,a:direction)
+  return a:org_time_dictionary
+endfunction
+
+function! ChangeOrgTimeStampHours(org_time_dictionary, direction)
+  let l:result = ChangeOrgTimeStampTimeInternal(a:org_time_dictionary,'h', a:direction)
+  return l:result
+endfunction
+
+function! ChangeOrgTimeStampMinutes(org_time_dictionary, direction)
+  let l:result = ChangeOrgTimeStampTimeInternal(a:org_time_dictionary,'m', a:direction)
+  return l:result
+endfunction
+
+function! ChangeOrgTimeStampTimeInternal(org_time_dictionary,key,direction)
+  let l:time=a:org_time_dictionary['T']
+  let l:change_item=l:time[a:key]
+  if a:direction ==# '+'
+    let l:new_item=TwoDigitNumberString(l:change_item + 1)
+  elseif a:direction ==# '-'
+    let l:new_item=TwoDigitNumberString(l:change_item - 1)
+  else 
+    let l:new_item=l:change_item
+  endif
+  let l:other_key = OrgTimeToggleMinutesHours(a:key)
+  let l:other_item=l:time[l:other_key]
+  let l:new_time={a:key : l:new_item, l:other_key : l:other_item}
+  let a:org_time_dictionary['T']=l:new_time
+  return a:org_time_dictionary
+endfunction
+
 " --}}}
 " -- Manage Todos -- {{{ 
 let g:todo_keylist=["TODO ", "IN PROGRESS ", "DONE "]
@@ -491,7 +756,7 @@ endfunction
 
 
 function! TwoDigitNumberString(number_string)
-  if a:number_string < 10 && a:number_string > -10
+  if a:number_string < 10 && a:number_string > -10 && len(a:number_string) ==# 1
     return "0" . a:number_string
   else 
     return a:number_string
