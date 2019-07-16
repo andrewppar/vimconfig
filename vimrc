@@ -35,7 +35,7 @@ set background=dark
 set laststatus=2
 "}}}
 "Status Line --- {{{
-set statusline=%.30F\ %y%h%m%r\ %=%{v:register}\ Lines:\ %L\ %#Question#%{strftime('%a\ %b\ %e\ %H:%M')}
+set statusline=%.30F\ %y%h%m%r\ %=%{v:register}\ %l:%c\ %#Question#%{strftime('%a\ %b\ %e\ %H:%M')}
 ""set statusline=%t[%{strlen(&fenc)?&fenc:'none'},%{&ff}]%h%m%r\ %=%{v:register}\ %l/%L\ %P\ %#Question#%{strftime('%a\ %b\ %e\ %I:%M')}
 set wrap linebreak nolist
 set tabstop=4 shiftwidth=2 expandtab
@@ -47,14 +47,17 @@ hi SpellBad cterm=underline
 " Custom general key mappings --- {{{
 let mapleader = ","
 inoremap jk <Esc>`^
+<<<<<<< HEAD
 onoremap jk <Esc>
 nnoremap <leader>s :call SaveMakingDirs()<cr>
+=======
+>>>>>>> 0851f499a21d8beaf155e966ac635c01d0ab0648
 nnoremap <leader>o <C-w><C-w>
 nnoremap <leader>1 <C-w>T
 nnoremap <C-d> :sh<CR> 
 nnoremap [ %
 vnoremap [ %
-nnoremap gg=G :call Reindent()<cr> 
+nnoremap <leader>q :call Reindent()<cr>
 
 "Copy and paste to clipboard
 vnoremap <leader>y :w !pbcopy<CR>
@@ -71,11 +74,13 @@ function! SaveMakingDirs ()
   " Have Vim make dirs that don't exist.
   let l:path=expand('%:p:h')
   if isdirectory(l:path)
-    :write
+    execute "w <cr>"
+    let file=expand('%:p') . "bk"
+    execute "write " . l:file . "<cr>"
   else 
     let l:command="mkdir -p " . l:path
     execute "! " . l:command 
-    :write
+    execute ":w <cr>"
   endif 
 endfunction
 
@@ -93,12 +98,21 @@ let &t_EI = "\e[2 q"
 " }}}
 " Org Mode --- {{{
 augroup filetype_org
-  autocmd! 
-
+  autocmd!  
   autocmd BufEnter *.org set nospell
+  "@todo make these changes local 
   autocmd FileType org nnoremap <leader>t :call ToggleLines()<CR> 
+<<<<<<< HEAD
   "@todo unify this ^ with CycleTodoKeys
   " autocmd FileType org nnoremap <C-M> :call OutlineNewline()<CR>
+=======
+  autocmd FileType org nnoremap <C-N> :call OrgLineIncreaseTimeStamp()<CR>
+  autocmd FileType org nnoremap <C-P> :call OrgLineDecreaseTimeStamp()<CR>
+  autocmd FileType org inoremap <C-J> <esc>`^:call OutlineNewline()<CR>A 
+  autocmd FileType org nnoremap <leader>s o<esc>`^:call InsertCurrentDateInformation()<CR>
+  autocmd FileType org nnoremap <leader>a :call OrgAgenda()<CR>
+  autocmd FileType org nnoremap <leader>d :call OrgArchiveTodos()<CR>
+>>>>>>> 0851f499a21d8beaf155e966ac635c01d0ab0648
   autocmd BufRead,BufNewFile *.org set filetype=org
 augroup END
 
@@ -149,15 +163,15 @@ function! CompileTeX()
 endfunction 
 "}}}
 " Lisp -- {{{
-"compile Lisp file 
-function! CompileLisp ()
-  execute "! clisp " . " " . '%'
+"Compile and Run Lisp file 
+function! CompileAndRunLisp ()
+  execute "! clisp -x \"(load \\\"" .'%' . "\\\")\" -repl" 
 endfunction
 augroup filetype_lisp 
   autocmd!
-  autocmd FileType lisp nnoremap <leader>b :w<CR>:call CompileLisp()<CR>
+  autocmd FileType lisp nnoremap <leader>c :w<CR>:call CompileAndRunLisp()<CR>
   autocmd FileType lisp nnoremap - o(write-line "")<esc>o
-  autocmd FileType lisp nnoremap <leader>c I;<esc>
+  autocmd FileType lisp nnoremap <leader>; I;<esc>
 augroup END
 "}}}
 " Haskell -- {{{

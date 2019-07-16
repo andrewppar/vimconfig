@@ -20,6 +20,38 @@ endfunction
 " -- Manage Dates --{{{
 let g:days=["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
+function! OrgGetAdjacentWeekday(weekday,direction)
+  if a:direction ==# '+'
+    return OrgGetNextWeekday(a:weekday)
+  elseif a:direction ==# '-'
+    return OrgGetPreviousWeekday(a:weekday)
+  else 
+    return "OrgGetAdjacentWeekday ERROR"
+  endif
+endfunction
+
+function! OrgGetPreviousWeekday (weekday)
+  let l:week_index=index(g:days, a:weekday)
+  let l:last_index=len(g:days)
+  if l:week_index ==# 0
+    return g:days[l:last_index - 1]
+  else 
+    return g:days[l:week_index - 1]
+  endif 
+endfunction
+
+
+function! OrgGetNextWeekday(weekday)
+  let l:week_index=index(g:days,a:weekday)
+  let l:last_index=len(g:days)
+  if l:week_index >= l:last_index - 1
+    return g:days[0]
+  else 
+    return g:days[l:week_index + 1]
+  endif 
+endfunction
+
+
 function! GetDayFromBuffer () 
   let l:line=getline('.')
   let l:possibly_split_lines=split(l:line, '<')
@@ -110,17 +142,250 @@ function! GetItemFromOrgDate(org_date,start,end)
   return strpart(l:clean_string,a:start,a:end)
 endfunction
 
-function! IngestOrgDate(org_date_string, org_date_dictionary)
-  let l:year_month_day=split(a:org_date_string, "-")
-  let l:org_date_dictionary['y']=l:year_month_day[0]
-  let l:org_date_dictionary['m']=l:year_month_day[1]
-  let l:org_date_dictionary['d']=l:year_month_day[2]
-  return l:org_date_dictionary
+"Dates are represented internally as a dictionary whose keys are 
+"'D' for date, 'W' for day, and 'T' for timestamp
+" The value of 'D' is a dictionary whose keys are 'y','m', and 'd' for  
+" year, month, and date.
+" The value of 'T' is a dictionary whose keys are 
+" 'h' and 'm' for hours and minutes.
+" @todo if these sparse keys cause a single bug use 
+" something robust fool 
+function! OrgLineIncreaseTimeStamp ()
+  "@public 
+  return OrgLineChangeTimeStamp('+')
 endfunction
 
-"function! IngestOrgDay(org_date_string, org_date_dictionary)
-"
-"endfunction
+function! OrgLineDecreaseTimeStamp ()
+  "@public
+  return OrgLineChangeTimeStamp('-')
+endfunction
+
+function! OrgLineChangeTimeStamp(direction)
+  "@private 
+  "@input direction one of '+' or '-'
+  "@todo make this preserve what's around the timestamp
+  let l:line=getline('.') 
+  let l:cursor_column=virtcol('.')
+  if OrgDateLineP(l:line)
+    let l:cursor_key=CursorKeyForTimeStamp(l:line,l:cursor_column)
+    "    echom "KEY" 
+    "    echom l:cursor_key
+    let l:dict=IngestOrgTimeStamp(l:line,l:cursor_key)
+    "    echom "DATE"
+    let l:date=l:dict['D']
+    "    echom "Year " . l:date['y']
+    "    echom "Month " . l:date['m']
+    "    echom "Day " . l:date['d']
+    "    echom "WeekDay " . l:dict['W']
+    "    echom "Time " 
+    let l:time=l:dict['T']
+    "    echom "hour " . l:time['h']
+    "    echom "minute " . l:time['m']
+    let l:dict=ChangeOrgTimeStamp(l:dict,l:cursor_key,a:direction)
+    echom "DATE"
+    let l:date=l:dict['D']
+    "    echom "Year " . l:date['y']
+    "    echom "Month " . l:date['m']
+    "    echom "Day " . l:date['d']
+    "    echom "WeekDay " . l:dict['W']
+    "    echom "Time " 
+    let l:time=l:dict['T']
+    "    echom "hour " . l:time['h']
+    "    echom "minute " . l:time['m']
+    execute ":norm 0d$"
+    let l:timestamp_string=WriteTimeStampDictionaryToString(l:dict)
+    execute ":norm i   " . l:timestamp_string 
+    execute ":norm " . l:cursor_column . "|"
+  else
+    return -1
+  endif
+endfunction
+
+function! WriteTimeStampDictionaryToString(time_stamp_dictionary)
+  let l:date=a:time_stamp_dictionary['D']
+  let l:year=l:date['y']
+  let l:month=l:date['m']
+  let l:day=l:date['d']
+  let l:weekday=a:time_stamp_dictionary['W']
+  let l:time=a:time_stamp_dictionary['T']
+  let l:hours=l:time['h']
+  let l:minutes=l:time['m']
+  let l:timestampstring="<" . l:year . "-" . l:month . "-" . l:day . " " . l:weekday . " " . l:hours . ":" . l:minutes . ">"
+  return l:timestampstring
+endfunction
+
+function! CursorKeyForTimeStamp (line, cursor_column)
+  "@note: Assumes that the cursor is on a:line and 
+  "that that line is a OrgDateLineP
+  let l:time_stamp_start=stridx(a:line,'<')
+  if a:cursor_column <= l:time_stamp_start + 5
+    return 'y'
+  elseif a:cursor_column <= l:time_stamp_start + 8 
+    return 'm'
+  elseif a:cursor_column <= l:time_stamp_start + 11
+    return 'd'
+  elseif a:cursor_column <= l:time_stamp_start + 15
+    return 'W' 
+  elseif a:cursor_column <= l:time_stamp_start + 18 
+    return 'h'
+  else 
+    return 'mi'
+  endif
+endfunction
+
+
+function!IngestOrgTimeStamp(line, cursor_key)
+  "@note: assumes that the a:line is a OrgDateLineP
+  let l:date_strings=matchlist(a:line, '\v\<(\d\d\d\d-\d\d-\d\d) (\S\S\S) (\d\d:\d\d).*')
+  let l:date=IngestOrgDate(l:date_strings[1], {}) 
+  let l:day=l:date_strings[2] 
+  let l:time=IngestOrgTime(l:date_strings[3], {})
+  let l:result={'D':l:date, 'W':l:day, 'T':l:time} 
+  return l:result
+endfunction
+
+function! IngestOrgDate(org_date_string, org_date_dictionary)
+  "@note: assumes that a:org_date_string is of the form \d\d\d\d-\d\d-\d\d
+  let l:year_month_day=split(a:org_date_string, "-")
+  let a:org_date_dictionary['y']=l:year_month_day[0]
+  let a:org_date_dictionary['m']=l:year_month_day[1]
+  let a:org_date_dictionary['d']=l:year_month_day[2]
+  return a:org_date_dictionary
+endfunction
+
+function! IngestOrgTime(org_time_string, org_time_dictionary)
+  "@note: assumes that a:org_time_string is of the form \d\d:\d\d
+  let l:hour_minute=split(a:org_time_string, ":")
+  let a:org_time_dictionary['h']=l:hour_minute[0]
+  let a:org_time_dictionary['m']=l:hour_minute[1]
+  return a:org_time_dictionary
+endfunction
+
+function! OrgTimeToggleMinutesHours (org_time_key)
+  if a:org_time_key ==# 'm'
+    return 'h'
+  elseif a:org_time_key ==# 'h'
+    return 'm'
+  else 
+    return "ERROR"
+  endif
+endfunction
+
+function! ChangeOrgTimeStamp (org_time_dictionary, slot_to_change, direction)
+  if a:slot_to_change ==# 'y'
+    return ChangeOrgTimeStampYear(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'm'
+    return ChangeOrgTimeStampMonth(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'd'
+    return ChangeOrgTimeStampDay(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'W'
+    return ChangeOrgTimeStampWeekday(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'h'
+    return ChangeOrgTimeStampHours(a:org_time_dictionary,a:direction)
+  elseif a:slot_to_change ==# 'mi'
+    return ChangeOrgTimeStampMinutes(a:org_time_dictionary,a:direction)
+  else 
+    return -1
+  endif 
+endfunction
+
+function! ChangeOrgTimeStampMonth (org_time_dictionary,direction)
+  return ChangeOrgTimeStampDateInternal (a:org_time_dictionary, 'm', a:direction)
+endfunction
+
+function! ChangeOrgTimeStampYear (org_time_dictionary, direction)
+  return ChangeOrgTimeStampDateInternal(a:org_time_dictionary, 'y', a:direction)
+endfunction
+
+"@TODO Add cycles to all the adding of months and days. When we hit the end of
+"a month by days, or day, year by months, or day by hours, everything should
+"roll over. 
+
+function! ChangeOrgTimeStampDateInternal (org_time_dictionary, slot_to_change, direction)
+  let l:datestamp=a:org_time_dictionary['D'] 
+  let l:year=l:datestamp['y']
+  let l:month=l:datestamp['m']
+  if a:slot_to_change ==# 'y'
+    if a:direction ==# '+' 
+      let l:updated_year=l:year + 1
+    elseif a:direction ==# '-'
+      let l:updated_year=l:year - 1  
+    else
+      let l:updated_year = l:year
+    endif 
+    let l:updated_month=l:month 
+  else 
+    let l:updated_year=l:year
+    if a:direction ==# '+' 
+      let l:updated_month=l:month + 1
+    elseif a:direction ==# '-'
+      let l:updated_month=l:month - 1
+    else
+      let l:updated_month=l:month
+    endif
+  endif 
+  let l:day=l:datestamp['d']
+  let l:new_weekday=GetDayFromYearMonthDay(l:updated_year, l:updated_month, l:day)
+  let l:new_datestamp={'y':l:updated_year, 'm':(TwoDigitNumberString(l:updated_month)), 'd':l:day}
+  let a:org_time_dictionary['D']=l:new_datestamp
+  let a:org_time_dictionary['W']=l:new_weekday
+  return a:org_time_dictionary
+endfunction 
+
+function! ChangeOrgTimeStampWeekday (org_time_dictionary, direction)
+  return ChangeOrgTimeStampDayInternal(a:org_time_dictionary, a:direction)
+endfunction
+
+function! ChangeOrgTimeStampDay (org_time_dictionary, direction)
+  return ChangeOrgTimeStampDayInternal(a:org_time_dictionary, a:direction)
+endfunction
+
+function! ChangeOrgTimeStampDayInternal(org_time_dictionary, direction)
+  let l:weekday=a:org_time_dictionary['W']
+  let l:datestamp=a:org_time_dictionary['D']
+  let l:year=l:datestamp['y']
+  let l:month=l:datestamp['m']
+  let l:day=l:datestamp['d']
+  if a:direction ==# '+'
+    let l:updated_day=TwoDigitNumberString(l:day + 1)
+  elseif a:direction ==# '-'
+    let l:updated_day=TwoDigitNumberString(l:day - 1)
+  else
+    let l:updated_day=l:day
+  endif
+  let l:new_datestamp={'y': l:year, 'm': l:month, 'd':l:updated_day}
+  let a:org_time_dictionary['D']=l:new_datestamp
+  let a:org_time_dictionary['W']=OrgGetAdjacentWeekday(l:weekday,a:direction)
+  return a:org_time_dictionary
+endfunction
+
+function! ChangeOrgTimeStampHours(org_time_dictionary, direction)
+  let l:result = ChangeOrgTimeStampTimeInternal(a:org_time_dictionary,'h', a:direction)
+  return l:result
+endfunction
+
+function! ChangeOrgTimeStampMinutes(org_time_dictionary, direction)
+  let l:result = ChangeOrgTimeStampTimeInternal(a:org_time_dictionary,'m', a:direction)
+  return l:result
+endfunction
+
+function! ChangeOrgTimeStampTimeInternal(org_time_dictionary,key,direction)
+  let l:time=a:org_time_dictionary['T']
+  let l:change_item=l:time[a:key]
+  if a:direction ==# '+'
+    let l:new_item=TwoDigitNumberString(l:change_item + 1)
+  elseif a:direction ==# '-'
+    let l:new_item=TwoDigitNumberString(l:change_item - 1)
+  else 
+    let l:new_item=l:change_item
+  endif
+  let l:other_key = OrgTimeToggleMinutesHours(a:key)
+  let l:other_item=l:time[l:other_key]
+  let l:new_time={a:key : l:new_item, l:other_key : l:other_item}
+  let a:org_time_dictionary['T']=l:new_time
+  return a:org_time_dictionary
+endfunction
+
 " --}}}
 " -- Manage Todos -- {{{ 
 let g:todo_keylist=["TODO ", "IN PROGRESS ", "DONE "]
@@ -157,16 +422,24 @@ function! CycleNextTodoKey(current_todo_key)
   " If the new keyword is the last one, close the item.
   "@todo make 'CLOSED" be indented the right amount
   if l:next_key ==# g:todo_keylist[-1]
-    execute ':normal! o CLOSED: '
-    call InsertCurrentDateInformation()
-    "This is kk because our general toggling function requires it, calling
-    "this from CycleTodoKeysInternal does not require it. I have no idea why
-    "It might be night to put the extra k on the outside of this function, but
-    " I'm not sure how to do that. Maybe this function just has to be 
-    " private. 
-    execute ':normal! kk' 
-    "If the old keyword was the last remove any 
-    "old CLOSEDs
+    let l:next_line_number=(line('.') + 1)
+    let l:next_line=getline(l:next_line_number)
+    if OrgDateLineP(l:next_line)
+      execute ":normal! j0d$I CLOSED: "
+      call InsertCurrentDateInformation()
+      execute ":normal! kk"
+    else 
+      execute ":normal! o CLOSED: "
+      call InsertCurrentDateInformation()
+      "This is kk because our general toggling function requires it, calling
+      "this from CycleTodoKeysInternal does not require it. I have no idea why
+      "It might be night to put the extra k on the outside of this function, but
+      " I'm not sure how to do that. Maybe this function just has to be 
+      " private. 
+      execute ':normal! kk' 
+      "If the old keyword was the last remove any 
+      "old CLOSEDs
+    endif
   elseif a:current_todo_key ==# g:todo_keylist[-1]
     let l:next_line=getline(line('.')+1)
     if l:next_line =~# '^\s*CLOSED:'
@@ -258,7 +531,7 @@ endfunction
 
 let g:efficient_sort=0
 
-function! GetTodoDictionary() 
+function! GetTodoDictionary()
   "@todo expand to look at a group of files
   "This function looks at the current file 
   "and generates a dictionary of all the non-finished todo items 
@@ -276,54 +549,33 @@ function! GetTodoDictionary()
     let l:current_line=getline(l:current_line_number)
     " check if it is a todo line
     let l:current_todo=TodoLineWithKeys(l:current_line, g:todo_keylist)
-    "echom "LINE" 
-    "echom l:current_line
-    "echom "CURRENT TODO" 
-    "echom l:current_todo
     "If it is and it's not 'DONE'
     if index(g:todo_keylist, l:current_todo) >= 0 && l:current_todo !=# l:last_todo 
-      "echom "FOUND USEFUL LINE"
       "Check for a date. 
       let l:next_line=getline(l:current_line_number + 1)
-      "echom "NEXT LINE" 
-      "echom l:next_line
       let l:org_date=OrgDateLineP(l:next_line)
-      "echom "DATE?"
-      "echom l:org_date
       let l:todo_item=TodoLineTodoItem(l:current_line)
       if l:org_date > 0 
-        "Experimental  -- {DATE:{TIME:[ITEM]}}
-        if g:efficient_sort > 0
-          let l:todo_date=GetDateFromOrgDate(l:next_line)
-          let l:todo_time=GetTimeFromOrgDate(l:next_line)
-          if has_key(l:todo_dictionary, l:todo_date)
-            let l:date_entry=l:todo_dictionary[l:todo_date]
-            if has_key(l:date_entry,l:todo_time)
-              let l:time_entries=l:date_entry[l:todo_time]
-              let l:time_entries=add(l:date_entry,l:current_todo)
-            else 
-              let l:date_entry[l:todo_time]=[l:current_todo]
-            endif
-          else
-            let l:todo_dictionary[l:todo_date]={l:todo_time:[l:current_todo]}
-          endif 
-          "End Experimental
-        else 
-          let l:todo_dictionary[l:todo_item]=l:next_line 
+        let l:todo_date=GetDateFromOrgDate(l:next_line)
+        let l:todo_time=GetTimeFromOrgDate(l:next_line)
+        if has_key(l:todo_dictionary, l:todo_date)
+          let l:date_entry=l:todo_dictionary[l:todo_date]
+          if has_key(l:date_entry,l:todo_time)
+            let l:time_entries=l:date_entry[l:todo_time]
+            let l:time_entries=add(l:time_entries,l:todo_item)
+          else 
+            let l:date_entry[l:todo_time]=[l:todo_item]
+          endif
+        else
+          let l:todo_dictionary[l:todo_date]={l:todo_time:[l:todo_item]}
         endif 
       else 
-        "Experimental -- {DATE:{TIME:[ITEM]}}
-        if g:efficient_sort > 0
-          if has_key(l:todo_dictionary,"0000-00-00")
-            let l:dateless_todos=l:todo_dictionary["0000-00-00"]
-            let l:timeless_todos=l:dateless_todos["00:00"]
-            let l:timeless_todos=add(l:timeless_todos,l:todo_item) 
-          else 
-            let l:todo_dictionary["0000-00-00"]={"00:00":[l:todo_item]}
-          endif 
-          "end Experimental
-        else
-          let l:todo_dictionary[l:todo_item]="" 
+        if has_key(l:todo_dictionary,"0000-00-00")
+          let l:dateless_todos=l:todo_dictionary["0000-00-00"]
+          let l:timeless_todos=l:dateless_todos["00:00"]
+          let l:timeless_todos=add(l:timeless_todos,l:todo_item) 
+        else 
+          let l:todo_dictionary["0000-00-00"]={"00:00":[l:todo_item]}
         endif 
       endif
     endif
@@ -346,9 +598,18 @@ function! OrgDateLineP(line)
   if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\>') !=? ""
     return 1
   endif
-  if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+\d*\S>') !=? ""
-    return 1
+  if matchstr(a:line, '\v\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+\d*\S>') !=? "" 
+    return 1 
   endif
+  " These are not yet necessary
+  "  if matchstr(a:line, '\v\w+:\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\>') !=? ""
+  "    echom "HERE!!!"
+  "    return 1
+  "  endif 
+  "  if matchstr(a:line, '\v\w+:\<\d\d\d\d-\d\d-\d\d \S\S\S \d\d:\d\d\ \+d*\S>') !=? ""
+  "    echom "THERE!!!!"
+  "    return 1
+  "  endif 
   return 0 
 endfunction 
 
@@ -384,60 +645,11 @@ function! OutlineNewline ()
 endfunction
 "  }}}
 " -- Org Agenda --- {{{
-"  @todo currently we pull the items off the agend and then sort them for each
-"  day, we could really do this all at once with a single agenda. This has
-"  caused noticable lag when loading bigger todo files. It has not yet caused
-"  seriously objectionable lag but it probably will. 
 
 let g:agenda_vertical_p=1
 
-function! OrgAgenda() 
-  let l:todo_items=GetTodoDictionary()
-  let l:timeless_todos=[]
-  let l:timed_todos={} 
-  for todo_item in keys(l:todo_items)
-    let l:todo_time=l:todo_items[l:todo_item]
-    if l:todo_time ==? ""
-      let l:timeless_todos=add(l:timeless_todos,l:todo_item)
-    else
-      let l:timed_todos[l:todo_item]=l:todo_time
-    endif 
-  endfor
-  "vertical or horizontal split
-  if g:agenda_vertical_p
-    execute ":vsp *agenda*"
-  else
-    execute ":sp *agenda*"
-  endif 
-  "set up the buffer
-  setlocal modifiable
-  setlocal buftype=nofile
-  set ft=org-agenda
-  "ensure there isn't anying already in the buffer
-  execute ":normal! gg0vG$dd"
-  "Set up the page
-  execute ":normal! iOrg Agenda"
-  execute ":normal! o------------------------------------------------"
-  call PrintTimelessTodoItems(l:timeless_todos)
-  execute ":normal! o"
-  let l:current_month_name=strftime("%b")
-  execute ":normal! o" . l:current_month_name
-  let l:current_month=strftime("%m")
-  let l:current_day=strftime("%d")
-  let l:current_year=strftime("%Y")
-  let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year) 
-  for day in g:days
-    "if day matches todo then print todo
-    "Do something special for today, i.e. expand it and add now
-    let l:current_date=l:weekday_dict[l:day]
-    execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
-    let l:today_p=l:current_date ==# l:current_day 
-    call PrintOrgTodoItemsForDay(l:timed_todos, l:current_date, l:current_month, l:current_year, l:today_p)
-  endfor 
-  setlocal nomodifiable
-endfunction
-
-function! OrgAgendaAlt()
+function! OrgAgenda()
+  "@public
   let g:efficient_sort=1 
   let l:todo_item_dictionary=GetTodoDictionary()
   let timeless_todos=l:todo_item_dictionary["0000-00-00"]
@@ -464,26 +676,50 @@ function! OrgAgendaAlt()
   let l:current_day=strftime("%d")
   let l:current_year=strftime("%Y")
   let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year) 
-    for day in g:days
+  for day in g:days
     "if day matches todo then print todo
     "Do something special for today, i.e. expand it and add now
-    let l:current_date_and_datestamp=l:weekday_dict[l:day]
+    "echom "DAY"
+    "echom l:day
+    let l:current_date_and_datestamp=l:weekday_dict[l:day] 
+    "for item in l:current_date_and_datestamp
+    "  echom l:item
+    "endfor 
     let l:current_date=l:current_date_and_datestamp[0]
+    "echom l:current_date
     let l:current_year_month_day_date=l:current_date_and_datestamp[1]
+    "echom "HERE"
+    "echom l:current_year_month_day_date
     execute "normal! o" . l:day . " " . l:current_date . "  ----------------------------------------"
     let l:today_p=l:current_date ==# l:current_day 
     if has_key(l:todo_item_dictionary, l:current_year_month_day_date)
+      " echom "IN IF"
       let l:day_dictionary=l:todo_item_dictionary[l:current_year_month_day_date] 
-      call printOrgTodoItemsForDayAlt(l:day_dictionary, l:current_day) 
+      "" echom "FOR" 
+      " for time in keys(l:day_dictionary)
+      "  " echom "TIME"
+      "   "echom l:time
+      "   for item in l:day_dictionary[l:time]
+      "    " echom "ITEM"
+      "     "echom l:item
+      "   endfor
+      "   echom "TIMEDONE"
+      " endfor
+      call PrintOrgTodoItemsForDay(l:day_dictionary, l:current_day) 
     endif 
   endfor
 endfunction
 
-function! PrintOrgTodoItemsForDayAlt(todo_day_dictionary, day)
-  let l:sorted_keys=sort(keys(l:todo_day_dictionary), "OrgTimeGreaterThan")
+function! PrintOrgTodoItemsForDay(todo_day_dictionary, day) 
+  "  echom "PRINT"
+  let l:sorted_keys=sort(keys(a:todo_day_dictionary), "OrgTimeGreaterThan")
   for time in l:sorted_keys
-    let l:todo_item=l:todo_day_dictionary[l:time]
-    call PrintTodoItem(l:todo_item, l:time)
+    "   echom l:time
+    let l:todo_items=a:todo_day_dictionary[l:time]
+    for todo in l:todo_items 
+      "    echom l:todo
+      call PrintTodoItem(l:todo, l:time)
+    endfor
   endfor
 endfunction
 
@@ -497,39 +733,6 @@ function! PrintTimelessTodoItems(items)
     call PrintTodoItem(l:item, "     ")
   endfor 
 endfunction 
-
-function! PrintOrgTodoItemsForDay(todo_dictionary, day, month, year, today_p)
-  "echom "PRINT ORG TODO ITEMS" 
-  let l:todo_items_for_day={}
-  if a:today_p
-    "@todo turn this into it's own function
-    let l:current_day_hour=9
-    while l:current_day_hour<19
-      let l:hourstring=TwoDigitNumberString(l:current_day_hour)
-      let l:timestamp_for_hour_today=l:hourstring . ":00"
-      let l:todo_items_for_day[l:timestamp_for_hour_today]=""
-      let l:current_day_hour=l:current_day_hour+1
-    endwhile 
-    "echom "GENERATED TODAY"
-    "echom a:today_p 
-  endif
-  for todo_item in keys(a:todo_dictionary) 
-    "echom l:todo_item
-    let l:timestamp=a:todo_dictionary[l:todo_item]
-    let l:scheduled_date=GetDateFromOrgDate(l:timestamp)
-    if a:year . "-" . a:month . "-" . TwoDigitNumberString(a:day) ==# l:scheduled_date 
-      let l:scheduled_time=GetTimeFromOrgDate(l:timestamp) 
-      " @todo figure out what to do if there are multiple items at the same
-      " time 
-      let l:todo_items_for_day[l:scheduled_time]=l:todo_item
-    endif  
-  endfor
-  let l:sorted_keys=sort(keys(l:todo_items_for_day),"OrgTimeGreaterThan") 
-  for time in l:sorted_keys
-    let l:todo_item=l:todo_items_for_day[l:time]
-    call PrintTodoItem(l:todo_item, l:time)
-  endfor
-endfunction
 
 function! OrgTimeGreaterThan (time_1, time_2)
   let l:hours_1=strpart(a:time_1,0,2)
@@ -553,7 +756,7 @@ endfunction
 
 
 function! TwoDigitNumberString(number_string)
-  if a:number_string < 10 && a:number_string > -10
+  if a:number_string < 10 && a:number_string > -10 && len(a:number_string) ==# 1
     return "0" . a:number_string
   else 
     return a:number_string
@@ -576,11 +779,11 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
       let l:loop_date=a:current_year . "-" . (a:current_month - 1) . "-" . l:loop_day
     else
       let l:loop_day=l:potential_loop_day 
-      let l:loop_date=a:current_year . "-" . a:current_month . "-" . l:loop_day
+      let l:loop_date=a:current_year . "-" . a:current_month . "-" . TwoDigitNumberString(l:loop_day)
     endif 
     let l:loop_weekday=g:days[l:day_count]
     if g:efficient_sort
-      let l:weekdays[l:loop_weekday]=[l:loop_weekday, l:loop_date]
+      let l:weekdays[l:loop_weekday]=[l:loop_day, l:loop_date]
     else 
       let l:weekdays[l:loop_weekday]=l:loop_day
     endif
@@ -591,10 +794,10 @@ function! CurrentWeekDayDictionary(current_day, current_month, current_year)
     let l:potential_loop_day=a:current_day + (l:day_count - l:current_weekday_count)
     if l:potential_loop_day > l:month_length 
       let l:loop_day=l:potential_loop_day - l:month_length
-      let l:loop_date=a:current_year . "-" . (a:current_month +1) . "-" . l:loop_day 
+      let l:loop_date=a:current_year . "-" . (a:current_month +1) . "-" . TwoDigitNumberString(l:loop_day)
     else 
       let l:loop_day=l:potential_loop_day
-      let l:loop_date=a:current_year . "-" . a:current_month . "-" . l:loop_day 
+      let l:loop_date=a:current_year . "-" . a:current_month . "-" . TwoDigitNumberString(l:loop_day)
     endif 
     let l:loop_weekday=g:days[l:day_count]
     if g:efficient_sort
@@ -633,5 +836,76 @@ endfunction
 
 function! CheckBoxLineUncheckBox()
   execute ":s/\\[X\\]/[ ]/"
+endfunction
+"  }}}
+" --- Archive Finished Todos --- {{{ 
+function! OrgArchiveTodos ()
+  "@public
+  let l:archive_dictionary=GetFinishedTodosErasingFromOriginal()
+  let l:archive_buffer=expand('%') . "_archive" 
+  execute ":tabedit " . l:archive_buffer
+  execute ":normal G$" 
+  call WriteArchivedTodos(l:archive_dictionary) 
+endfunction
+
+function! WriteArchivedTodos(dictionary)
+  for timestamp in keys(a:dictionary)
+    for todo in a:dictionary[l:timestamp]
+      execute ":normal o" . l:todo
+      execute ":normal o" . l:timestamp
+      execute ":normal o ARCHIVED: " 
+      call InsertCurrentDateInformation()
+      execute ":normal o"
+    endfor
+  endfor
+  execute ":wq"
+endfunction
+"@note It would be nice to have a general purpose todo scraper. If we write another
+" one then we should probably abstract out the internals.
+
+function! GetFinishedTodosErasingFromOriginal ()
+  "This function looks at the current file and deletes all the finished todo
+  "items, placing them in an archive file.
+  let l:finished_task_dictionary = {}
+  let l:last_line_number=line('$')
+  let l:current_line_number=0
+  let l:lines_to_delete=[]
+  while l:current_line_number <= l:last_line_number
+    let l:current_line=getline(l:current_line_number)
+    let l:current_line_todo_tag=TodoLineWithKeys(l:current_line, g:todo_keylist)
+    if index(g:todo_keylist, l:current_line_todo_tag) ==# g:last_todo_idx
+      let l:next_line=getline(l:current_line_number +1)
+      let l:todo_item=TodoLineTodoItem(l:current_line)
+      let l:org_date=OrgDateLineP(l:next_line)
+      let l:lines_to_delete=add(l:lines_to_delete,l:current_line_number)
+      if l:org_date > 0 
+        call UpdateDictionaryWithKey(l:finished_task_dictionary, l:next_line, l:todo_item) 
+        let l:lines_to_delete=add(l:lines_to_delete,(l:current_line_number + 1)) 
+      else 
+        call UpdateDictionaryWithKey(l:finished_task_dictionary, "0000-00-00", l:todo_item)
+      endif
+    endif
+    let l:current_line_number = l:current_line_number + 1 
+  endwhile 
+  "Clean up archived lines
+  for line_number in reverse(l:lines_to_delete)
+    execute ":" . l:line_number . "d"
+  endfor 
+  return l:finished_task_dictionary
+endfunction
+
+
+" }}}
+" --- General Utilities --- {{{ 
+function! UpdateDictionaryWithKey (dictionary, key, value)
+  "@note This function assumes that dictionary values
+  "are lists
+  if has_key(a:dictionary,a:key)
+    let l:entry=a:dictionary[a:key]
+    let l:entry=add(l:entry,a:value)
+  else
+    let a:dictionary[a:key]=[a:value]
+  endif 
+  return a:dictionary
 endfunction
 "  }}}
