@@ -40,7 +40,6 @@ function! OrgGetPreviousWeekday (weekday)
   endif 
 endfunction
 
-
 function! OrgGetNextWeekday(weekday)
   let l:week_index=index(g:days,a:weekday)
   let l:last_index=len(g:days)
@@ -50,7 +49,6 @@ function! OrgGetNextWeekday(weekday)
     return g:days[l:week_index + 1]
   endif 
 endfunction
-
 
 function! GetDayFromBuffer () 
   let l:line=getline('.')
@@ -305,25 +303,9 @@ function! ChangeOrgTimeStampDateInternal (org_time_dictionary, slot_to_change, d
   let l:datestamp=a:org_time_dictionary['D'] 
   let l:year=l:datestamp['y']
   let l:month=l:datestamp['m']
-  if a:slot_to_change ==# 'y'
-    if a:direction ==# '+' 
-      let l:updated_year=l:year + 1
-    elseif a:direction ==# '-'
-      let l:updated_year=l:year - 1  
-    else
-      let l:updated_year = l:year
-    endif 
-    let l:updated_month=l:month 
-  else 
-    let l:updated_year=l:year
-    if a:direction ==# '+' 
-      let l:updated_month=l:month + 1
-    elseif a:direction ==# '-'
-      let l:updated_month=l:month - 1
-    else
-      let l:updated_month=l:month
-    endif
-  endif 
+  let l:month_year_list=OrgUpdateMonthAndYear(l:month,l:year,a:slot_to_change,a:direction)
+  let l:updated_month=l:month_year_list[0]
+  let l:updated_year=l:month_year_list[1]
   let l:day=l:datestamp['d']
   let l:new_weekday=GetDayFromYearMonthDay(l:updated_year, l:updated_month, l:day)
   let l:new_datestamp={'y':l:updated_year, 'm':(TwoDigitNumberString(l:updated_month)), 'd':l:day}
@@ -331,6 +313,41 @@ function! ChangeOrgTimeStampDateInternal (org_time_dictionary, slot_to_change, d
   let a:org_time_dictionary['W']=l:new_weekday
   return a:org_time_dictionary
 endfunction 
+
+function! OrgUpdateMonthAndYear(month,year,slot_to_change,direction)
+  if a:slot_to_change ==# 'y' 
+    if a:direction ==# '+' 
+      let l:updated_year=a:year + 1
+    elseif a:direction ==# '-'
+      let l:updated_year=a:year - 1  
+    else "SHOULD NEVER HAPPEN
+      let l:updated_year = a:year
+    endif 
+    let l:updated_month=a:month 
+  else 
+    " let l:updated_year=a:year
+    if a:direction ==# '+' 
+      if a:month==# '12'
+        let l:updated_month='01'
+        let l:updated_year =a:year + 1
+      else
+        let l:updated_year =a:year
+        let l:updated_month=a:month + 1
+      endif 
+    elseif a:direction ==# '-'
+      if a:month ==# '01'
+        let l:updated_month='12'
+        let l:updated_year=a:year -1
+      else 
+        let l:updated_month = a:month -1 
+        let l:updated_year = a:year
+      endif
+    else "SHOULD NEVER HAPPEN
+      let l:updated_month=a:month
+    endif
+  endif 
+  return [l:updated_month, l:updated_year]
+endfunction
 
 function! ChangeOrgTimeStampWeekday (org_time_dictionary, direction)
   return ChangeOrgTimeStampDayInternal(a:org_time_dictionary, a:direction)
@@ -344,19 +361,46 @@ function! ChangeOrgTimeStampDayInternal(org_time_dictionary, direction)
   let l:weekday=a:org_time_dictionary['W']
   let l:datestamp=a:org_time_dictionary['D']
   let l:year=l:datestamp['y']
-  let l:month=l:datestamp['m']
+  let l:month=l:datestamp['m'] 
   let l:day=l:datestamp['d']
-  if a:direction ==# '+'
-    let l:updated_day=TwoDigitNumberString(l:day + 1)
-  elseif a:direction ==# '-'
-    let l:updated_day=TwoDigitNumberString(l:day - 1)
-  else
-    let l:updated_day=l:day
-  endif
-  let l:new_datestamp={'y': l:year, 'm': l:month, 'd':l:updated_day}
+  let l:updated_day_month_year=OrgUpdateDayMonthAndYear(l:day,l:month,l:year,a:direction)
+  let l:updated_year =TwoDigitNumberString(l:updated_day_month_year[2])
+  let l:updated_month=TwoDigitNumberString(l:updated_day_month_year[1])
+  let l:updated_day  =TwoDigitNumberString(l:updated_day_month_year[0])
+  let l:new_datestamp={'y': l:updated_year, 'm': l:updated_month, 'd':l:updated_day}
   let a:org_time_dictionary['D']=l:new_datestamp
   let a:org_time_dictionary['W']=OrgGetAdjacentWeekday(l:weekday,a:direction)
   return a:org_time_dictionary
+endfunction
+
+function! OrgUpdateDayMonthAndYear(day,month,year,direction)
+  if a:direction ==# '+'
+    let l:day_max=g:month_length_dictionary[a:month]
+    if a:day ==# l:day_max
+      let l:updated_day='01'
+      let l:month_year_list=OrgUpdateMonthAndYear(a:month,a:year, 'm','+')
+      let l:updated_month=l:month_year_list[0]
+      let l:updated_year=l:month_year_list[1]
+    else
+      let l:updated_day=a:day + 1
+      let l:updated_month=a:month
+      let l:updated_year=a:year
+    endif 
+  elseif a:direction ==# '-'
+    if a:day ==# '01'
+      let l:month_year_list=OrgUpdateMonthAndYear(a:month, a:year,'m','-')
+      let l:updated_month=TwoDigitNumberString(l:month_year_list[0])
+      let l:updated_year =l:month_year_list[1]
+      let l:updated_day  =g:month_length_dictionary[l:updated_month]
+    else
+      let l:updated_day=a:day - 1
+      let l:updated_month=a:month
+      let l:updated_year=a:year 
+    endif
+  else "SHOULD NEVER HAPPEN
+    return -1
+  endif
+  return [l:updated_day, l:updated_month, l:updated_year]
 endfunction
 
 function! ChangeOrgTimeStampHours(org_time_dictionary, direction)
@@ -371,20 +415,80 @@ endfunction
 
 function! ChangeOrgTimeStampTimeInternal(org_time_dictionary,key,direction)
   let l:time=a:org_time_dictionary['T']
-  let l:change_item=l:time[a:key]
-  if a:direction ==# '+'
-    let l:new_item=TwoDigitNumberString(l:change_item + 1)
-  elseif a:direction ==# '-'
-    let l:new_item=TwoDigitNumberString(l:change_item - 1)
-  else 
-    let l:new_item=l:change_item
+  let l:hours=l:time['h']
+  let l:minutes=l:time['m']
+  let l:date_dictionary=a:org_time_dictionary['D']
+  let l:year=l:date_dictionary['y']
+  let l:month=l:date_dictionary['m']
+  let l:day=l:date_dictionary['d'] 
+  if a:key ==# 'h'
+    let l:hours_day_month_year_list=OrgUpdateHoursDaysMonthsandYear(l:hours,l:day,l:month,l:year,a:direction)
+    let l:updated_hours=TwoDigitNumberString(l:hours_day_month_year_list[0])
+    let l:updated_day=  TwoDigitNumberString(l:hours_day_month_year_list[1])
+    let l:updated_month=TwoDigitNumberString(l:hours_day_month_year_list[2])
+    let l:updated_year= l:hours_day_month_year_list[3]
+    let l:updated_weekday=GetDayFromYearMonthDay(l:updated_year,l:updated_month,l:updated_day)
+    let l:updated_minutes=l:minutes
+  elseif a:key ==# 'm'
+    let l:minutes_hours_day_month_year_list=OrgUpdateMinutesHoursDaysMonthsandYears(l:minutes,l:hours,l:day,l:month,l:year,a:direction)
+    let l:updated_minutes=TwoDigitNumberString(l:minutes_hours_day_month_year_list[0])
+    let l:updated_hours  =TwoDigitNumberString(l:minutes_hours_day_month_year_list[1])
+    let l:updated_day    =TwoDigitNumberString(l:minutes_hours_day_month_year_list[2])
+    let l:updated_month  =TwoDigitNumberString(l:minutes_hours_day_month_year_list[3])
+    let l:updated_year   =l:minutes_hours_day_month_year_list[4]
+    let l:updated_weekday=GetDayFromYearMonthDay(l:updated_year,l:updated_month, l:updated_day)
+  else "SHOULD NOT HAPPEN
+    return -1
   endif
-  let l:other_key = OrgTimeToggleMinutesHours(a:key)
-  let l:other_item=l:time[l:other_key]
-  let l:new_time={a:key : l:new_item, l:other_key : l:other_item}
-  let a:org_time_dictionary['T']=l:new_time
-  return a:org_time_dictionary
+  let l:updated_date={'y': l:updated_year, 'm' : l:updated_month, 'd' : l:updated_day}
+  let l:updated_time={'h' : l:updated_hours, 'm' : l:updated_minutes }
+  return {'D': l:updated_date, 'W': l:updated_weekday, 'T':l:updated_time}
 endfunction
+
+"@todo consider factoring out the internals of these functions. 
+function! OrgUpdateHoursDaysMonthsandYear (hours,day,month,year,direction)
+  if a:direction ==# '+'
+    if a:hours ==# '23'
+      let l:updated_hours='00'
+      let l:result=[l:updated_hours] + OrgUpdateDayMonthAndYear(a:day,a:month,a:year,'+')
+    else
+      let l:result=[(a:hours + 1),a:day,a:month,a:year]
+    endif
+  elseif a:direction ==# "-"
+    if a:hours ==# '00'
+      let l:updated_hours='23'
+      let l:result=[l:updated_hours] + OrgUpdateDayMonthAndYear(a:day,a:month,a:year,'-')
+    else
+     let l:result=[(a:hours - 1),a:day,a:month,a:year]
+    endif
+  else "THIS SHOULD NEVER HAPPEN
+    return -1
+  endif
+  return l:result
+endfunction
+
+function! OrgUpdateMinutesHoursDaysMonthsandYears (minutes,hours,day,month,year,direction)
+  if a:direction ==# '+'
+    if a:minutes ==# '59'
+      let l:updated_minutes='00'
+      let l:result=[l:updated_minutes] + OrgUpdateHoursDaysMonthsandYear(a:hours,a:day,a:month,a:year,'+')
+    else
+      let l:result=[(a:minutes + 1),a:hours,a:day,a:month,a:year]
+    endif
+  elseif a:direction ==# "-"
+    if a:minutes ==# '00'
+      let l:updated_minutes='59'
+      let l:result=[l:updated_minutes] + OrgUpdateHoursDaysMonthsandYear(a:hours,a:day,a:month,a:year,'-')
+    else
+      let l:result=[(a:minutes - 1),a:hours,a:day,a:month,a:year]
+    endif
+  else "THIS SHOULD NEVER HAPPEN
+    return -1
+  endif
+  return l:result
+endfunction
+
+
 
 " --}}}
 " -- Manage Todos -- {{{ 
