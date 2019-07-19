@@ -90,15 +90,18 @@ function! GetDayFromYearMonthDay (year, month, day)
 endfunction
 
 function! InsertTimeStamp ()
-  call GenerateTimeStampInternal(1,0) 
+  let l:timestamp=GenerateTimeStampInternal(1,0) 
+  execute ":norm o    ". l:timestamp
 endfunction
 
 function! GetTimeToInsert ()
-  call GenerateTimeStampInternal(0,0)
+  let l:timestamp=GenerateTimeStampInternal(0,0)
+  execute ":norm o    ". l:timestamp
 endfunction
 
 function! InsertCurrentDateInformation()
-  call GenerateTimeStampInternal(1,1)
+  let l:timestamp=GenerateTimeStampInternal(1,1)
+  execute ":norm o    ". l:timestamp
 endfunction
 
 function! GenerateTimeStampInternal(use_today_p, use_now_p)
@@ -117,7 +120,7 @@ function! GenerateTimeStampInternal(use_today_p, use_now_p)
     let l:time=input("Time: ")
   endif
   let l:timestamp=GenerateTimeStamp(l:day, l:month, l:year, l:time)
-  execute ':normal! i' . l:timestamp 
+  return l:timestamp
 endfunction
 
 function! GenerateTimeStamp(day, month, year, time) 

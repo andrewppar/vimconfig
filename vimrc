@@ -47,7 +47,6 @@ hi SpellBad cterm=underline
 " Custom general key mappings --- {{{
 let mapleader = ","
 inoremap jk <Esc>`^
-nnoremap <leader>s :w<cr>
 nnoremap <leader>o <C-w><C-w>
 nnoremap <leader>1 <C-w>T
 nnoremap <C-d> :sh<CR> 
@@ -86,7 +85,6 @@ nnoremap <leader>f :tabedit
 "Edit .vimrc while in another file. 
 nnoremap <C-c>e    :tabedit ~/.vimrc<cr>
 nnoremap <leader>e :call SourceCurrentBuffer()<cr>
-nnoremap <leader>sv :source ~/.vimrc<cr>
 "}}}
 " Make the Cursor change with different modes --- {{{
 let &t_SI = "\e[6 q" 
@@ -101,7 +99,7 @@ augroup filetype_org
   autocmd FileType org nnoremap <C-N> :call OrgLineIncreaseTimeStamp()<CR>
   autocmd FileType org nnoremap <C-P> :call OrgLineDecreaseTimeStamp()<CR>
   autocmd FileType org inoremap <C-J> <esc>`^:call OutlineNewline()<CR>A 
-  autocmd FileType org nnoremap <leader>s o<esc>`^:call InsertCurrentDateInformation()<CR>
+  autocmd FileType org nnoremap <leader>s :call InsertCurrentDateInformation()<CR>
   autocmd FileType org nnoremap <leader>a :call OrgAgenda()<CR>
   autocmd FileType org nnoremap <leader>d :call OrgArchiveTodos()<CR>
   autocmd FileType org nnoremap <leader>c :call ExecuteBash()<CR>

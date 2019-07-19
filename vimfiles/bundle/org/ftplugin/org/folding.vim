@@ -37,3 +37,10 @@ function! OrgFold(linum)
     return '='
   endif
 endfunction 
+
+function! OrgFoldText()
+  let l:line=getline(v:foldstart)
+  return l:line
+endfunction
+
+setlocal foldtext=OrgFoldText() 
