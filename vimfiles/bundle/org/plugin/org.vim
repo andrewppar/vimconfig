@@ -165,6 +165,10 @@ function! OrgLineChangeTimeStamp(direction)
   let l:line=getline('.') 
   let l:cursor_column=virtcol('.')
   if OrgDateLineP(l:line)
+    let l:start_idx=match(l:line, '<')
+    let l:string_before_date=l:line[:(l:start_idx - 1)]
+    let l:end_idx=matchend(l:line, '\v.*>')
+    let l:string_after_date=l:line[(l:end_idx +1):]
     let l:cursor_key=CursorKeyForTimeStamp(l:line,l:cursor_column)
     "    echom "KEY" 
     "    echom l:cursor_key
@@ -180,7 +184,6 @@ function! OrgLineChangeTimeStamp(direction)
     "    echom "hour " . l:time['h']
     "    echom "minute " . l:time['m']
     let l:dict=ChangeOrgTimeStamp(l:dict,l:cursor_key,a:direction)
-    echom "DATE"
     let l:date=l:dict['D']
     "    echom "Year " . l:date['y']
     "    echom "Month " . l:date['m']
@@ -191,15 +194,15 @@ function! OrgLineChangeTimeStamp(direction)
     "    echom "hour " . l:time['h']
     "    echom "minute " . l:time['m']
     execute ":norm 0d$"
-    let l:timestamp_string=WriteTimeStampDictionaryToString(l:dict)
-    execute ":norm i   " . l:timestamp_string 
+    let l:timestamp_string=WriteTimeStampDictionaryToString(l:dict,l:string_before_date,l:string_after_date)
+    execute ":norm i" . l:timestamp_string 
     execute ":norm " . l:cursor_column . "|"
   else
     return -1
   endif
 endfunction
 
-function! WriteTimeStampDictionaryToString(time_stamp_dictionary)
+function! WriteTimeStampDictionaryToString(time_stamp_dictionary,string_before,string_after)
   let l:date=a:time_stamp_dictionary['D']
   let l:year=l:date['y']
   let l:month=l:date['m']
@@ -208,7 +211,7 @@ function! WriteTimeStampDictionaryToString(time_stamp_dictionary)
   let l:time=a:time_stamp_dictionary['T']
   let l:hours=l:time['h']
   let l:minutes=l:time['m']
-  let l:timestampstring="<" . l:year . "-" . l:month . "-" . l:day . " " . l:weekday . " " . l:hours . ":" . l:minutes . ">"
+  let l:timestampstring= a:string_before . "<" . l:year . "-" . l:month . "-" . l:day . " " . l:weekday . " " . l:hours . ":" . l:minutes . ">" . a:string_after
   return l:timestampstring
 endfunction
 
