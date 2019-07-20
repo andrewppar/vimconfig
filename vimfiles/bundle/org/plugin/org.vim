@@ -11,7 +11,8 @@
 " and propertly dispatches. 
 function! ToggleLines ()
   let l:possibly_outline_depth_or_todo_key=CurrenLineTodoLineWithKeys(g:todo_keylist)
-  let l:ran_todo=CycleTodoKeysInternal(l:possibly_outline_depth_or_todo_key) 
+  let l:line=getline('.')
+  let l:ran_todo=CycleTodoKeysInternal(l:possibly_outline_depth_or_todo_key, l:line)
   if l:ran_todo ==# -1
     call ToggleCheckBox()
   endif 
@@ -91,17 +92,17 @@ endfunction
 
 function! InsertTimeStamp ()
   let l:timestamp=GenerateTimeStampInternal(1,0) 
-  execute ":norm o    ". l:timestamp
+  execute ":norm i". l:timestamp
 endfunction
 
 function! GetTimeToInsert ()
   let l:timestamp=GenerateTimeStampInternal(0,0)
-  execute ":norm o    ". l:timestamp
+  execute ":norm i". l:timestamp
 endfunction
 
 function! InsertCurrentDateInformation()
   let l:timestamp=GenerateTimeStampInternal(1,1)
-  execute ":norm o    ". l:timestamp
+  execute ":norm i". l:timestamp
 endfunction
 
 function! GenerateTimeStampInternal(use_today_p, use_now_p)
@@ -465,7 +466,7 @@ function! OrgUpdateHoursDaysMonthsandYear (hours,day,month,year,direction)
       let l:updated_hours='23'
       let l:result=[l:updated_hours] + OrgUpdateDayMonthAndYear(a:day,a:month,a:year,'-')
     else
-     let l:result=[(a:hours - 1),a:day,a:month,a:year]
+      let l:result=[(a:hours - 1),a:day,a:month,a:year]
     endif
   else "THIS SHOULD NEVER HAPPEN
     return -1
@@ -509,15 +510,28 @@ function! CycleTodoKeys ()
   "was on a star line. If it was, it will insert the next todo key in 
   "the cycle and return 1. Otherwise it will do nothing and return 0. 
   let l:possibly_outline_depth_or_todo_key=CurrenLineTodoLineWithKeys(g:todo_keylist) 
-  return CycleTodoKeysInternal(l:possibly_outline_depth_or_todo_key)
+  let l:line=getline('.')
+  return CycleTodoKeysInternal(l:possibly_outline_depth_or_todo_key,l:line)
 endfunction
 
-function! CycleTodoKeysInternal (possibly_outline_depth_or_todo_key)
+"This was a bad idea. CycleTodoKeys was the first function I wrote 
+" and it shows. The internals use while loops instead of regex
+" The function below assumes that its caller will make all the relevant
+" determinations wrt the ways a line could be. @todo refactor/rewrite this
+" whole thing.
+
+function! CycleTodoKeysInternal (possibly_outline_depth_or_todo_key, line)
+  echom a:possibly_outline_depth_or_todo_key
   if index(g:todo_keylist, a:possibly_outline_depth_or_todo_key) >= 0 
     return CycleNextTodoKey(a:possibly_outline_depth_or_todo_key) 
   elseif a:possibly_outline_depth_or_todo_key ==? 1 
     execute ':normal! 0f a' . g:todo_keylist[0]
     return 1
+  elseif NumericLineP(a:line) ==# 0 
+    let l:last_number=GetNumberLineNumber(a:line)
+    call InsertNewNumberLineOnNewLine(l:last_number)
+  elseif DashedListLineP(a:line) ==# 0
+    call InsertNewDashedLineOnNewLine()
   else
     return -1
   endif
@@ -618,7 +632,8 @@ endfunction
 function! TodoLineWithKeys(line, keywords)
   let l:outline_depth=OutlineItemDepth(a:line)
   if l:outline_depth 
-    let l:line_init=strpart(a:line,(l:outline_depth + 1))
+    let l:line_init=strpart(a:line,(l:outline_depth + 1)) 
+    " If this is an outline line then it's implicitly a todo line
     let l:key=""
     let l:index=0
     let l:max=len(a:keywords) 
@@ -629,6 +644,7 @@ function! TodoLineWithKeys(line, keywords)
       endif
       let l:index += 1
     endwhile
+    " An outline line with no matches is the null todoline
     if l:key ==? "" 
       return 1
     else
@@ -737,6 +753,49 @@ function! FinishedLineWithCloseTime()
   endif
 endfunction
 " -- }}}
+"  -- Lists         --- {{{
+"  -- Dashed Lists  -- {{{
+function! TestDashedLine ()
+  let l:line=getline('.')
+  echom DashedListLineP(l:line)
+endfunction
+
+function! InsertNewDashedLineOnNewLine ()
+  "For now we will enforce the number of 
+  "spaces before a dash. See the comment
+  "on InsertNewNumberLineOnNewLine 
+  execute ":norm o - "
+endfunction
+
+
+function! DashedListLineP (line)
+  "@note this line returns 0 for True
+  return match(a:line, '\v^\s*-')
+endfunction
+"  }}}
+"  -- Numeric Lines -- {{{ 
+
+function! NumericLineP  (line)
+  "@note this function will return 0 for true 
+  return match(a:line,'\v^\s*\d+\.') 
+endfunction
+
+function! GetNumberLineNumber(line)
+  let l:number_as_array=matchlist(a:line, '\v\s*(\d+)')
+  let l:number=l:number_as_array[1]
+  return l:number
+endfunction
+
+function! InsertNewNumberLineOnNewLine(previous_number)
+  "For now we enforce the number of spaces before a 
+  "number line. I don't think it's crazy to let this be set by 
+  "the previouus line. 
+  "@todo update code so that previous line indents are respected. 
+  let l:next_number=(a:previous_number + 1)
+  execute ":norm o "  .  l:next_number . ". "
+endfunction
+"  }}}
+"  }}}
 " -- Outline Items --- {{{ 
 
 function! OutlineNewline ()

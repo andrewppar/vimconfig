@@ -99,7 +99,7 @@ augroup filetype_org
   autocmd FileType org nnoremap <C-N> :call OrgLineIncreaseTimeStamp()<CR>
   autocmd FileType org nnoremap <C-P> :call OrgLineDecreaseTimeStamp()<CR>
   autocmd FileType org inoremap <C-J> <esc>`^:call OutlineNewline()<CR>A 
-  autocmd FileType org nnoremap <leader>s :call InsertCurrentDateInformation()<CR>
+  autocmd FileType org nnoremap <leader>s :normal o    <CR>:call InsertCurrentDateInformation()<CR>
   autocmd FileType org nnoremap <leader>a :call OrgAgenda()<CR>
   autocmd FileType org nnoremap <leader>d :call OrgArchiveTodos()<CR>
   autocmd FileType org nnoremap <leader>c :call ExecuteBash()<CR>
