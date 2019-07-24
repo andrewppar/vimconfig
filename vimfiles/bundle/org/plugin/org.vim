@@ -676,7 +676,8 @@ function! GetTodoDictionary()
     " check if it is a todo line
     let l:current_todo=TodoLineWithKeys(l:current_line, g:todo_keylist)
     "If it is and it's not 'DONE'
-    if index(g:todo_keylist, l:current_todo) >= 0 && l:current_todo !=# l:last_todo 
+    "if index(g:todo_keylist, l:current_todo) >= 0 && l:current_todo !=# l:last_todo 
+    if NextLineIsDateLine()
       "Check for a date. 
       let l:next_line=getline(l:current_line_number + 1)
       let l:org_date=OrgDateLineP(l:next_line)
@@ -815,7 +816,7 @@ endfunction
 "  }}}
 " -- Org Agenda --- {{{
 
-let g:agenda_vertical_p=1
+let g:agenda_vertical_p=0
 
 function! OrgAgenda()
   "@public
