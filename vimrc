@@ -6,6 +6,9 @@ augroup filetype_vim
   autocmd FileType vim setlocal foldmethod=marker
 augroup end
 "}}} 
+" Set split below --- {{{
+set splitbelow
+"}}}
 " Set the path to do recursive search ---{{{
 set path+=** 
 "}}}
