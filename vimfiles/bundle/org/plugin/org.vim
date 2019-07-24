@@ -188,15 +188,6 @@ function! OrgLineChangeTimeStamp(direction)
     "    echom "hour " . l:time['h']
     "    echom "minute " . l:time['m']
     let l:dict=ChangeOrgTimeStamp(l:dict,l:cursor_key,a:direction)
-    let l:date=l:dict['D']
-    "    echom "Year " . l:date['y']
-    "    echom "Month " . l:date['m']
-    "    echom "Day " . l:date['d']
-    "    echom "WeekDay " . l:dict['W']
-    "    echom "Time " 
-    let l:time=l:dict['T']
-    "    echom "hour " . l:time['h']
-    "    echom "minute " . l:time['m']
     execute ":norm 0d$"
     let l:timestamp_string=WriteTimeStampDictionaryToString(l:dict,l:string_before_date,l:string_after_date)
     execute ":norm i" . l:timestamp_string 
@@ -527,11 +518,6 @@ function! CycleTodoKeysInternal (possibly_outline_depth_or_todo_key, line)
   elseif a:possibly_outline_depth_or_todo_key ==? 1 
     execute ':normal! 0f a' . g:todo_keylist[0]
     return 1
-  elseif NumericLineP(a:line) ==# 0 
-    let l:last_number=GetNumberLineNumber(a:line)
-    call InsertNewNumberLineOnNewLine(l:last_number)
-  elseif DashedListLineP(a:line) ==# 0
-    call InsertNewDashedLineOnNewLine()
   else
     return -1
   endif
@@ -804,14 +790,41 @@ function! OutlineNewline ()
   "depth as the current line. If the current
   "line is not an outline line then it just enters a line. 
   let l:outline_depth=LineOutlineItemDepth()
-  let l:star_count=0
-  let l:stars=""
-  while l:star_count < outline_depth
-    let l:stars=l:stars . "*"
-    let l:star_count=l:star_count + 1
-  endwhile
-  execute ":normal! o" . l:stars 
+  let line=getline('.')
+  if l:outline_depth > 0 
+    let l:star_count=0
+    let l:stars=""
+    while l:star_count < outline_depth
+      let l:stars=l:stars . "*"
+      let l:star_count=l:star_count + 1
+    endwhile
+    execute ":normal! o" . l:stars 
+  elseif NumericLineP(l:line) ==# 0 
+    let l:last_number=GetNumberLineNumber(l:line)
+    call InsertNewNumberLineOnNewLine(l:last_number)
+  elseif DashedListLineP(l:line) ==# 0
+    call InsertNewDashedLineOnNewLine()
+  else
+    execute ":normal! o" 
+  endif 
   return 1
+endfunction
+
+function! OutlineIndent () 
+  "Adds a depth of one more star to a line
+  execute ":normal 0i*"
+  return 1
+endfunction
+
+function! OutlineUnindent ()
+  "Removes a start from a the current line
+  "if one exists
+  let l:outline_depth=LineOutlineItemDepth() 
+  if l:outline_depth > 0
+    execute ":normal! 0x"
+    return 1
+  endif 
+  return -1
 endfunction
 "  }}}
 " -- Org Agenda --- {{{
@@ -983,6 +996,8 @@ endfunction
 "  }}}
 "  -- Check Boxes --- {{{ 
 function! ToggleCheckBox()
+  "@todo have some returns here 
+  "to indicate what happened. 
   let l:line = getline('.')
   if CheckBoxLine(l:line)
     call CheckBoxLineCheckBox()
@@ -1067,6 +1082,60 @@ endfunction
 
 " }}}
 " --- Insert Code into Buffer --- {{{ 
+
+function! ExecuteBashInContext ()
+  "Here Context means that he previous line 
+  "is #BEGIN_BASH mode ...
+  "Currently we only support overwrite
+  let l:line_number=line('.')
+  let l:previous_line=getline(l:line_number - 1)
+  if BashSourceLineP(l:previous_line) ==# 0
+    let l:mode_index=matchend(l:previous_line,':mode ')
+    let l:mode=l:previous_line[(l:mode_index):]
+    let l:clean_mode=matchstr(l:mode,'\v\S+')
+    echom l:clean_mode
+    call ExecuteMode(l:clean_mode)
+    call ExecuteBash()
+    return 0
+  else
+    return -1 
+  endif 
+endfunction
+
+function! BashSourceLineP(line)
+  "@note this returns 0 for true
+  return match(a:line, '\v^\s*#BEGIN_BASH')
+endfunction
+
+function! ExecuteMode(mode)
+  "Currently we only support overwrite
+  if a:mode ==# 'overwrite'
+    call OverwriteBashOutput()
+    return 0
+  else 
+    return -1
+  endif
+endfunction
+
+function! OverwriteBashOutput ()
+  "@todo factor out this loop when we 
+  "want more modes
+  let l:found_end=-1
+  let l:line_count=0
+  let l:current_line=line('.')
+  let l:max_lines=line('$')
+  while l:found_end ==# -1 && l:current_line <= l:max_lines 
+    let l:line_to_test=getline(l:current_line)
+    let l:found_end=match(l:line_to_test, '\v^\s*#END_BASH')
+    let l:current_line=l:current_line + 1
+    let l:line_count=l:line_count +1
+  endwhile
+  if l:found_end ==# 0
+    execute ":normal j" . (l:line_count - 2) . "ddk"
+  endif
+endfunction
+
+
 function! ExecuteBash()
   let l:line_number=line('.')
   let l:column_number=virtcol('.')

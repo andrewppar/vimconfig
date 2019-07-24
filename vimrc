@@ -105,7 +105,9 @@ augroup filetype_org
   autocmd FileType org nnoremap <leader>s :normal o    <CR>:call InsertCurrentDateInformation()<CR>
   autocmd FileType org nnoremap <leader>a :call OrgAgenda()<CR>
   autocmd FileType org nnoremap <leader>d :call OrgArchiveTodos()<CR>
-  autocmd FileType org nnoremap <leader>c :call ExecuteBash()<CR>
+  autocmd FileType org nnoremap <C-c><C-c> :call ExecuteBashInContext()<CR>
+  autocmd FileType org nnoremap <C-L> :call OutlineIndent()<CR>
+  autocmd FileType org nnoremap <C-H> :call OutlineUnindent()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
 augroup END
 
