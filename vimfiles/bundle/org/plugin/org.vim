@@ -662,35 +662,30 @@ function! GetTodoDictionary()
     " check if it is a todo line
     let l:current_todo=TodoLineWithKeys(l:current_line, g:todo_keylist)
     "If it is and it's not 'DONE'
-    "if index(g:todo_keylist, l:current_todo) >= 0 && l:current_todo !=# l:last_todo 
-    if NextLineIsDateLine()
-      "Check for a date. 
-      let l:next_line=getline(l:current_line_number + 1)
-      let l:org_date=OrgDateLineP(l:next_line)
-      let l:todo_item=TodoLineTodoItem(l:current_line)
-      if l:org_date > 0 
-        let l:todo_date=GetDateFromOrgDate(l:next_line)
-        let l:todo_time=GetTimeFromOrgDate(l:next_line)
-        if has_key(l:todo_dictionary, l:todo_date)
-          let l:date_entry=l:todo_dictionary[l:todo_date]
-          if has_key(l:date_entry,l:todo_time)
-            let l:time_entries=l:date_entry[l:todo_time]
-            let l:time_entries=add(l:time_entries,l:todo_item)
-          else 
-            let l:date_entry[l:todo_time]=[l:todo_item]
-          endif
-        else
-          let l:todo_dictionary[l:todo_date]={l:todo_time:[l:todo_item]}
-        endif 
-      else 
-        if has_key(l:todo_dictionary,"0000-00-00")
-          let l:dateless_todos=l:todo_dictionary["0000-00-00"]
-          let l:timeless_todos=l:dateless_todos["00:00"]
-          let l:timeless_todos=add(l:timeless_todos,l:todo_item) 
+    let l:next_line=getline(l:current_line_number + 1)
+    let l:item=TodoLineTodoItem(l:current_line)
+    if OrgDateLineP(l:next_line) > 0
+      let l:todo_date=GetDateFromOrgDate(l:next_line)
+      let l:todo_time=GetTimeFromOrgDate(l:next_line)
+      if has_key(l:todo_dictionary, l:todo_date)
+        let l:date_entry=l:todo_dictionary[l:todo_date]
+        if has_key(l:date_entry,l:todo_time)
+          let l:time_entries=l:date_entry[l:todo_time]
+          let l:time_entries=add(l:time_entries,l:item)
         else 
-          let l:todo_dictionary["0000-00-00"]={"00:00":[l:todo_item]}
-        endif 
-      endif
+          let l:date_entry[l:todo_time]=[l:item]
+        endif
+      else
+        let l:todo_dictionary[l:todo_date]={l:todo_time:[l:item]}
+      endif 
+    elseif index(g:todo_keylist,l:current_todo) >= 0
+      if has_key(l:todo_dictionary,"0000-00-00")
+        let l:dateless_todos=l:todo_dictionary["0000-00-00"]
+        let l:timeless_todos=l:dateless_todos["00:00"]
+        let l:timeless_todos=add(l:timeless_todos,l:item) 
+      else 
+        let l:todo_dictionary["0000-00-00"]={"00:00":[l:item]}
+      endif 
     endif
     let l:current_line_number=l:current_line_number + 1
   endwhile 
@@ -703,7 +698,7 @@ function! TodoLineTodoItem(line)
   if l:depth>0
     return strpart(a:line,l:depth)
   else
-    return ""
+    return a:line
   endif 
 endfunction
 
@@ -854,11 +849,25 @@ function! OrgAgenda()
   call PrintTimelessTodoItems(l:timeless_todos["00:00"])
   execute ":normal! o"
   let l:current_month_name=strftime("%b")
-  execute ":normal! o" . l:current_month_name
   let l:current_month=strftime("%m")
   let l:current_day=strftime("%d")
   let l:current_year=strftime("%Y")
   let l:weekday_dict=CurrentWeekDayDictionary(l:current_day, l:current_month, l:current_year) 
+  let l:earliest_year_month_day_date=l:weekday_dict[g:days[0]][1]
+  let l:latest_year_month_day_date=l:weekday_dict[g:days[6]][1]
+  let l:earlier_items={}
+  let l:later_items={}
+  for date in keys(l:todo_item_dictionary)
+    if l:date !=# "0000-00-00"
+      if OrgDateGreaterThan(l:date,l:earliest_year_month_day_date) && !(l:date ==# l:earliest_year_month_day_date)
+        let l:earlier_items[l:date]=l:todo_item_dictionary[l:date]
+      elseif OrgDateGreaterThan(l:latest_year_month_day_date,l:date)
+        let l:later_items[l:date]=l:todo_item_dictionary[l:date]
+      endif
+    endif
+  endfor 
+  call PrintOrgTodoItemsFromDateDictionary(l:earlier_items,"late  ") 
+  execute ":normal! o" . l:current_month_name
   for day in g:days
     "if day matches todo then print todo
     "Do something special for today, i.e. expand it and add now
@@ -888,12 +897,27 @@ function! OrgAgenda()
       "   endfor
       "   echom "TIMEDONE"
       " endfor
-      call PrintOrgTodoItemsForDay(l:day_dictionary, l:current_day) 
+      call PrintOrgTodoItemsForDay(l:day_dictionary,"status") 
     endif 
+  endfor
+  execute "normal! o"
+  execute "normal! o    Future  "
+  execute "normal! o=========================="
+
+  call PrintOrgTodoItemsFromDateDictionary(l:later_items,"future")
+endfunction
+
+function! PrintOrgTodoItemsFromDateDictionary (date_dictionary, status_string)
+  let l:sorted_keys=sort(keys(a:date_dictionary), "OrgDateGreaterThan")
+  for date in l:sorted_keys
+    let l:day_dictionary=a:date_dictionary[l:date]
+    call PrintOrgTodoItemsForDay(l:day_dictionary,a:status_string)
   endfor
 endfunction
 
-function! PrintOrgTodoItemsForDay(todo_day_dictionary, day) 
+
+
+function! PrintOrgTodoItemsForDay(todo_day_dictionary,status_string) 
   "  echom "PRINT"
   let l:sorted_keys=sort(keys(a:todo_day_dictionary), "OrgTimeGreaterThan")
   for time in l:sorted_keys
@@ -901,21 +925,23 @@ function! PrintOrgTodoItemsForDay(todo_day_dictionary, day)
     let l:todo_items=a:todo_day_dictionary[l:time]
     for todo in l:todo_items 
       "    echom l:todo
-      call PrintTodoItem(l:todo, l:time)
+      call PrintTodoItem(l:todo, l:time, a:status_string)
     endfor
   endfor
 endfunction
 
-function! PrintTodoItem(item, time)
+function! PrintTodoItem(item, time, status_string)
   "Conditionalise if time is 
-  execute "normal! o status: " . a:time . "...... " . a:item 
+  execute "normal! o " . a:status_string . ": " . a:time . "...... " . a:item 
 endfunction
 
 function! PrintTimelessTodoItems(items)
   for item in a:items
-    call PrintTodoItem(l:item, "     ")
+    call PrintTodoItem(l:item, "     ", "unset ")
   endfor 
 endfunction 
+
+" Sorting
 
 function! OrgTimeGreaterThan (time_1, time_2)
   let l:hours_1=strpart(a:time_1,0,2)
@@ -936,6 +962,30 @@ function! OrgTimeGreaterThan (time_1, time_2)
     return 1
   endif
 endfunction
+
+function! OrgDateGreaterThan(date_1, date_2)
+  let l:year_1=strpart(a:date_1,0,4)
+  let l:year_2=strpart(a:date_2,0,4)
+  if l:year_2 > l:year_1 
+    return 1
+  elseif l:year_2 ==# l:year_1
+    let l:month_1=strpart(a:date_1,5,2)
+    let l:month_2=strpart(a:date_2,5,2)
+    if l:month_2 > l:month_1 
+      return 1
+    elseif l:month_2 ==# l:month_1 
+      let l:day_1=strpart(a:date_1,7,2)
+      let l:day_2=strpart(a:date_2,7,2)
+      if l:day_2 > l:day_1
+        return 1
+      else
+        return 0
+      endif
+    endif
+  endif
+  return 0
+endfunction
+
 
 
 function! TwoDigitNumberString(number_string)
@@ -1105,6 +1155,7 @@ endfunction
 function! BashSourceLineP(line)
   "@note this returns 0 for true
   return match(a:line, '\v^\s*#BEGIN_BASH')
+  
 endfunction
 
 function! ExecuteMode(mode)

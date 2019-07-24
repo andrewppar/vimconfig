@@ -111,6 +111,12 @@ augroup filetype_org
   autocmd BufRead,BufNewFile *.org set filetype=org
 augroup END
 
+augroup filetype_org_agenda
+  autocmd! 
+  autocmd BufEnter \*agenda\* set nospell
+  autocmd FileType org-agenda nnoremap q :q<CR>
+augroup END
+
 " }}} 
 "UndoTree --- {{{
 "@todo think of something useful here. 
