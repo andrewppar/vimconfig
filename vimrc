@@ -186,7 +186,12 @@ augroup filetype_python
   autocmd FileType python nnoremap <leader>c :w<CR>:call CompilePython()<CR>
   autocmd FileType python vnoremap <leader>; :call CommentRegion("#")<cr>
 augroup END
-"}}}
+"}}} 
+" Java -- {{{
+augroup filetype_java 
+  autocmd!
+  autocmd FileType java :iabbrev <buffer> print System.out.println(
+" }}}
 " SPARQL -- {{{
 augroup filetype_sparql
   autocmd!  
@@ -231,4 +236,10 @@ function! CommentRegion (comment_string)
   let l:end=line("'>")
   execute l:start . "," . l:end . "norm I". a:comment_string
 endfunction
-"  --- }}}
+
+function! SurroundRegion (character)
+
+endfunction
+
+
+"  --- }}} 
