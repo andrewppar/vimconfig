@@ -140,3 +140,5 @@ alias 9='cd -9'
 
 #Commands 
 alias h='history -10' 
+
+alias -g  G='| grep -i' 
