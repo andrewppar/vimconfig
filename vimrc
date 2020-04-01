@@ -6,6 +6,9 @@ augroup filetype_vim
   autocmd FileType vim setlocal foldmethod=marker
 augroup end
 "}}} 
+" Set split below --- {{{
+set splitbelow
+"}}}
 " Set the path to do recursive search ---{{{
 set path+=** 
 "}}}
@@ -106,6 +109,12 @@ augroup filetype_org
   autocmd FileType org nnoremap <C-L> :call OutlineIndent()<CR>
   autocmd FileType org nnoremap <C-H> :call OutlineUnindent()<CR>
   autocmd BufRead,BufNewFile *.org set filetype=org
+augroup END
+
+augroup filetype_org_agenda
+  autocmd! 
+  autocmd BufEnter \*agenda\* set nospell
+  autocmd FileType org-agenda nnoremap q :q<CR>
 augroup END
 
 " }}} 
