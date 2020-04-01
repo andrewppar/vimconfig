@@ -99,7 +99,7 @@ source $ZSH/oh-my-zsh.sh
 function weather () {
  # curl "http://wttr.in/Boston"
  if [ -z $1 ]
- then LOCATION="Boston"
+ then LOCATION="02169"
  else LOCATION=$1
  fi 
  curl "http://wttr.in/$LOCATION"

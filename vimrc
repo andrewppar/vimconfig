@@ -115,18 +115,18 @@ augroup END
 "}}} 
 " Langauges --- {{{
 " COQ -- {{{
-augroup filetype_coq 
-  autocmd!
-  autocmd BufRead,BufNewFile *.v set filetype=coq
-  autocmd FileType coq :CoqIDESetMap
-  autocmd FileType coq inoremap <C-j> <esc>:CoqIDENext<CR>
-  autocmd FileType coq nnoremap <C-j> :CoqIDENext<CR>
-  autocmd FileType coq inoremap <C-k> <esc>:CoqIDEUndo<CR>
-  autocmd FileType coq nnoremap <C-k> :CoqIDEUndo<CR>
-  autocmd FileType coq inoremap <C-l> <esc>:CoqIDEToEOF<CR>
-  autocmd FileType coq nnoremap <C-l> :CoqIDEToEOF<CR>
-  autocmd FileType coq set nospell
-augroup END
+"augroup filetype_coq 
+"  autocmd!
+"  autocmd BufRead,BufNewFile *.v set filetype=coq
+"  autocmd FileType coq :CoqIDESetMap
+"  autocmd FileType coq inoremap <C-j> <esc>:CoqIDENext<CR>
+"  autocmd FileType coq nnoremap <C-j> :CoqIDENext<CR>
+"  autocmd FileType coq inoremap <C-k> <esc>:CoqIDEUndo<CR>
+"  autocmd FileType coq nnoremap <C-k> :CoqIDEUndo<CR>
+"  autocmd FileType coq inoremap <C-l> <esc>:CoqIDEToEOF<CR>
+"  autocmd FileType coq nnoremap <C-l> :CoqIDEToEOF<CR>
+"  autocmd FileType coq set nospell
+"augroup END
 "}}} 
 " LaTeX -- {{{
 augroup filetype_tex 
