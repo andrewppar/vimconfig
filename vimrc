@@ -93,6 +93,15 @@ nnoremap <leader>e :call SourceCurrentBuffer()<cr>
 let &t_SI = "\e[6 q" 
 let &t_EI = "\e[2 q" 
 " }}}
+" Useful Functions --- {{{ 
+function! RemoveMatchingPair ()
+  let position=getpos('.')
+  execute ':norm %x'
+  call cursor(l:position[1], l:position[2])
+  execute ':norm x'
+endfunction
+"}}}
+ 
 " Org Mode --- {{{
 augroup filetype_org
   autocmd!  
@@ -137,32 +146,6 @@ augroup END
 "  autocmd FileType coq set nospell
 "augroup END
 "}}} 
-" LaTeX -- {{{
-augroup filetype_tex 
-  autocmd!
-  "Compile LaTeX Files
-  autocmd FileType tex set spell 
-  autocmd FileType tex nnoremap <leader>b :w<CR>:call CompileTeX()<CR> 
-  "This doesn't do anything now ^
-  "I also don't like the idea of 
-  "linking my bash scripts to my 
-  "vim scripts like this.  
-
-  autocmd FileType tex nnoremap <leader>c I%<esc>  
-  " There's gotta be a better way to do this ^
-
-  "Check LaTeX word count
-  nnoremap <leader>w :w !detex \| wc -w<CR>
-  autocmd FileType tex nnoremap <leader>t :LatexTOC<CR>
-
-  "Wrap environment
-  autocmd FileType tex inoremap <C-L><C-E> <esc>vbxi\begin{<esc>pa}<CR><CR>\end{<esc>pa}<esc>ki
-augroup END
-
-function! CompileTeX()
-  execute "! compileLaTeX" . " " . '%' 
-endfunction 
-"}}}
 " Lisp -- {{{
 "Compile and Run Lisp file 
 function! CompileAndRunLisp ()
