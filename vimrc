@@ -56,6 +56,8 @@ nnoremap <C-d> :sh<CR>
 nnoremap [ %
 vnoremap [ %
 nnoremap <leader>q :call Reindent()<cr>
+nnoremap <leader>ev :tabedit ~/.vimrc<cr>
+nnoremap <leader>sv :source ~/.vimrc<cr>
 
 "Copy and paste to clipboard
 vnoremap <leader>y :w !pbcopy<CR>
@@ -94,14 +96,15 @@ let &t_SI = "\e[6 q"
 let &t_EI = "\e[2 q" 
 " }}}
 " Useful Functions --- {{{ 
+
 function! RemoveMatchingPair ()
   let position=getpos('.')
   execute ':norm %x'
   call cursor(l:position[1], l:position[2])
   execute ':norm x'
 endfunction
-"}}}
- 
+
+"}}} 
 " Org Mode --- {{{
 augroup filetype_org
   autocmd!  
